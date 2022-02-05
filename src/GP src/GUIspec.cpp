@@ -1,6 +1,7 @@
 #include "GUIspec.h"
 #include "FontData.h"
 #include "Event.h"
+#include "defines.h"
 #include "FileHandle.h"
 #include "../NMC/GLFW/glfw3.h"
 #include "../NMC/imgui/imgui_impl_glfw.h"
@@ -9,7 +10,6 @@
 #include "../NMC/imgui/imgui_internal.h"
 //#include <Windows.ApplicationModel.resources.h>
 #include "../Resources/res.h"
-
 
 namespace GpGUI {
     using namespace ImGui;
@@ -161,22 +161,22 @@ GUIspec::GUIspec(GLFWwindow* window) {
     ImGui_ImplOpenGL2_Init();
 
     io = ImGui::GetIO(); //(void)io;
-    //draw_list = ImGui::GetWindowDrawList();
-    
+
+#ifdef NO_STATIC_FONT
+    _main_font = io.Fonts->AddFontFromFileTTF("mainfont.ttf", 22.0f);
+    _main_font_Big = io.Fonts->AddFontFromFileTTF("mainfont.ttf", 28.0f);
+#else
     void* mainfontData1 = malloc(sizeof(l_10646_ttf));
     void* mainfontData2 = malloc(sizeof(l_10646_ttf));
     if (mainfontData1) memcpy(mainfontData1, l_10646_ttf, sizeof(l_10646_ttf));
     if (mainfontData2) memcpy(mainfontData2, l_10646_ttf, sizeof(l_10646_ttf));
-    //if (style) memcpy(style, styledata_bin, sizeof(styledata_bin));
 
     _main_font = io.Fonts->AddFontFromMemoryTTF(mainfontData1, sizeof(l_10646_ttf), 24.0f);
     _main_font_Big = io.Fonts->AddFontFromMemoryTTF(mainfontData2, sizeof(l_10646_ttf), 30.0f);
-    //delete mainfontData;
-
+#endif
     window_flags = WindowSetting();
     ImGui::GetStyle() = * ((ImGuiStyle*)styledata_bin);
     style = &GImGui->Style;
-    //style = (ImGuiStyle*)(styledata_bin);
 }
 
 void GUIspec::GUI_OnFrameStart()

@@ -68,11 +68,13 @@ project "HelloWorld"
    
    filter "action:vs*"
       libdirs { BuidName .."/src/NMC/GLFW/lib"}
+
    filter "action:gmake*"
-      --linkoptions { "-L C:/mingw/lib -lcomdlg32 -lole32" }
       links{ "comdlg32","ole32" }
       libdirs { BuidName .."/src/NMC/GLFW/dll"}
 
+      -- use static runtime library on GCC builds
+      buildoptions "-static-libstdc++"
       postbuildcommands {
          "{COPY} src/NMC/GLFW/dll/glfw3.dll %{cfg.targetdir}"
        }

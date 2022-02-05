@@ -6,12 +6,20 @@
 [GUI WIN CONTENT]
 [MAIN WIN CLASS IMPL]
 */
-#define ASYNC_METHOD_THREADING
-//#define LOCALTHREAD_METHOD_THREADING
+
+//------ Notes
+// sdf build his own verts making the verts edit usless in sdf
+// Log window seems off center
+// I might need to add async load bars for image rendering 
+// make loading gui more flex 
+// g++ static lincage
+
+#include "../defines.h"
 
 #if defined ASYNC_METHOD_THREADING && defined LOCALTHREAD_METHOD_THREADING
     static_assert(false, " conflicting defines");
 #endif
+
 //----------------------------------[INCLUDE]----------------------------------
 #include "Main_Win.h"
 
@@ -54,18 +62,20 @@ struct Win_spec {
 
 // font/glyph loading functions and listing
 struct font_loading {
-    struct FontLoadingStatus {
-        int Successful_laods = 0;
-        int Failed_Loads = 0;
-        std::vector<std::string> TargetFontsNames;
-    };
+    int Successful_laods = 0;
+    int Failed_Loads = 0;
+    std::vector<std::string> TargetFontsNames; // last font file names that was attmpted to load
+    void NewLoad(){TargetFontsNames.clear(); Successful_laods=0; Failed_Loads=0;   }
 
     std::vector<std::shared_ptr<FontData>> loaded_fonts;
     std::vector<std::shared_ptr<Image>> loaded_bitmaps; //list of glyphs bitmaps for preview 
+#if defined ASYNC_METHOD_THREADING || defined LOCALTHREAD_METHOD_THREADING
     Job<void> loading_job;
-    FontLoadingStatus loading_status;
+#else
+struct { bool is_working(){return false;}} loading_job ;
+#endif    
     int Total_Font_Load=0;
-
+    bool open_log =false;
    // bool thread_working = false;
 } LoadList;
 
@@ -118,7 +128,7 @@ struct Loading_GUI {
     float waitAbit = 0.0f;                       // for not closing the bar immediately..
     int Current_Font_Load = 0;
 
-    void Log( const char* log_name, bool* open, const std::vector<std::string>& loadedFonts) {
+    void Log( const char* log_name, bool* open, const char* msg, const std::vector<std::string>& log_lists) {
   
         if (*open) {
             ImVec2 win_size = ImGui::GetWindowSize();
@@ -131,17 +141,17 @@ struct Loading_GUI {
             ImVec2 this_GwinSize = ImGui::GetWindowSize();
 
             ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,flags);
-            for (size_t i = 0; i < loadedFonts.size(); i++)
+            for (size_t i = 0; i < log_lists.size(); i++)
             {
-                auto str = loadedFonts.at(i).c_str();
+                auto str = log_lists.at(i).c_str();
                 if(str[0] == '1')
                     ImGui::Text("%s - Successfully Loaded", str + 1);
                 if(str[0] == '0')
                     ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s - Failed To Load", str + 1);
             }
             ImGui::EndChild();
-            ImGui::Text("%i font files was successfully loaded", LoadList.loading_status.Successful_laods);
-            ImGui::Text("%i font files failed to load",LoadList.loading_status.Failed_Loads);
+            ImGui::TextUnformatted(msg);
+
             ImGui::PopStyleVar();
             if(LoadList.Total_Font_Load) 
                 ImGui::SetScrollY(ImGui::GetScrollMaxY());
@@ -182,10 +192,6 @@ struct Loading_GUI {
                     waitAbit = 0.0f;
                     Current_Font_Load = 0;
                     result = true;
-
-                    GP_Print(ImGui::GetScrollMaxY());
-                    //GP_Print(ImGui::scroll());
-                    ImGui::SetScrollFromPosY(ImGui::GetScrollMaxY());
                 }
             }
             ImGui::EndPopup();
@@ -242,17 +248,17 @@ int LoadFont_Path(const char* path) {
             auto fd = std::make_shared<FontData>(path, file_name);
             if (fd->gui_handle != Gui_Handle::Delete) { // meaning loading the font was successful
                 LoadList.loaded_fonts.push_back(fd);
-                LoadList.loading_status.Successful_laods++;
-                LoadList.loading_status.TargetFontsNames.push_back(fd->get_font_name());
-                auto& b = LoadList.loading_status.TargetFontsNames.back();
+                LoadList.Successful_laods++;
+                LoadList.TargetFontsNames.push_back(fd->get_font_name());
+                auto& b = LoadList.TargetFontsNames.back();
                 b = '1' + b;
                 return 1;
             }
             else
             {
-                LoadList.loading_status.Failed_Loads++;
-                LoadList.loading_status.TargetFontsNames.push_back(fd->get_font_name());
-                auto& b = LoadList.loading_status.TargetFontsNames.back();
+                LoadList.Failed_Loads++;
+                LoadList.TargetFontsNames.push_back(fd->get_font_name());
+                auto& b = LoadList.TargetFontsNames.back();
                 b = '0' + b;
 
                 LoadList.Total_Font_Load--;
@@ -268,7 +274,7 @@ void FontLoadingJob(std::vector<std::string>&& fonst_paths, const int count) {
     //for(auto& t: fonst_paths) GP_Print(t.c_str());
     //std::this_thread::sleep_for(std::chrono::seconds(1));
     if (fonst_paths.size() && count) {
-        LoadList.loading_status = font_loading::FontLoadingStatus();
+        LoadList.NewLoad();
         LoadList.Total_Font_Load = count;
         for (int i = 0; i < count; i++) {
             LoadFont_Path(fonst_paths[i].c_str());
@@ -362,18 +368,15 @@ void FontsLoadingCallback(const EventType& e) {
     std::vector<std::string> g_spath; // hard copy needed for laoding thread
     for (size_t i = 0; i < count; i++) { g_spath.push_back(paths[i]); }
 
-    GP_Print(std::this_thread::get_id());
-
-
 
 #if defined ASYNC_METHOD_THREADING
     LoadList.loading_job.give(FontLoadingJob, move(g_spath), count);
 #elif defined LOCALTHREAD_METHOD_THREADING
-    LoadList.loading_job.Start([path = std::move(g_spath),n = count]() 
-        mutable {FontLoadingJob(std::move(path), n); });
+    LoadList.loading_job.Start([=]() 
+        mutable {FontLoadingJob(std::move(g_spath), count); });
 
 #else
-    FontLoadingJob(g_spath, count);
+    FontLoadingJob(std::move(g_spath), count);
 #endif
     db_e.count = 0;
 }
@@ -1219,16 +1222,15 @@ void Main_Win::OnUpdate()
             ImGui::SetCursorPos(ImVec2(8.0f, 43.0f));
             ImGui::SetNextItemWidth(70.0f);
             MainCanvesGUIWin();
-
-            //std::string
-            // loading GUI and log..
-            static bool open_log;
-            LoadingGUI.Log("Log", &open_log, LoadList.loading_status.TargetFontsNames);
+            
             const char* loading_str = LoadList.loaded_fonts.empty() ? "Loading Font..." : LoadList.loaded_fonts.back()->get_font_name().c_str();
             if (LoadingGUI.ProcessLoadingLists(loading_str,LoadList.Total_Font_Load, LoadList.loading_job.is_working(), LoadList.loaded_fonts.size())) {
                 Process_Glyph_Textures(true);
-                open_log = true;
+                LoadList.open_log = true;
             }
+            char logmsg[254];
+            sprintf(logmsg,"%i font files was successfully loaded \n%i font files failed to load",LoadList.Successful_laods,LoadList.Failed_Loads);
+            LoadingGUI.Log("Log", &LoadList.open_log,logmsg, LoadList.TargetFontsNames);
         }
 
         {
