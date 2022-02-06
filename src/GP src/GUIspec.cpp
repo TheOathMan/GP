@@ -9,7 +9,10 @@
 #include "../NMC/tinydialog/tinyfiledialogs.h"
 #include "../NMC/imgui/imgui_internal.h"
 //#include <Windows.ApplicationModel.resources.h>
+#ifdef NO_STATIC_FONT
+#else
 #include "../Resources/res.h"
+#endif
 
 namespace GpGUI {
     using namespace ImGui;
@@ -161,10 +164,17 @@ GUIspec::GUIspec(GLFWwindow* window) {
     ImGui_ImplOpenGL2_Init();
 
     io = ImGui::GetIO(); //(void)io;
-
+    
 #ifdef NO_STATIC_FONT
-    _main_font = io.Fonts->AddFontFromFileTTF("mainfont.ttf", 22.0f);
-    _main_font_Big = io.Fonts->AddFontFromFileTTF("mainfont.ttf", 28.0f);
+    size_t fsize;
+    FileHandle f("Font/mainfont.ttf","rb",&fsize);
+    if(!f.file_data)
+        tinyfd_messageBox("Missing files","Font file is missing in Font/mainfont.ttf","ok","error",0);
+        //assert(false);
+
+    _main_font = io.Fonts->AddFontFromMemoryTTF(f.file_data, fsize, 24.0f);
+    _main_font_Big = io.Fonts->AddFontFromMemoryTTF(f.file_data, fsize, 30.0f);
+
 #else
     void* mainfontData1 = malloc(sizeof(l_10646_ttf));
     void* mainfontData2 = malloc(sizeof(l_10646_ttf));

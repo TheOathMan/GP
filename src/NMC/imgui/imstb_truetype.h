@@ -965,7 +965,8 @@ extern "C" {
     STBTT_DEF void stbtt_FreeSDF(unsigned char* bitmap, void* userdata);
     // frees the SDF bitmap allocated below
 
-    STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int* width, int* height, int* xoff, int* yoff, Glyph_Vertices* vertices = nullptr);
+    STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int* width, int* height, int* xoff, int* yoff,
+                    stbtt_vertex* invert=nullptr,int vcount=0);
     STBTT_DEF unsigned char* stbtt_GetCodepointSDF(const stbtt_fontinfo* info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int* width, int* height, int* xoff, int* yoff);
     // These functions compute a discretized SDF field for a single character, suitable for storing
     // in a single-channel texture, sampling with bilinear filtering, and testing against
@@ -4594,7 +4595,7 @@ static int stbtt__solve_cubic(float a, float b, float c, float* r)
     }
 }
 
-STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int* width, int* height, int* xoff, int* yoff, Glyph_Vertices* gv)
+STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float scale, int glyph, int padding, unsigned char onedge_value, float pixel_dist_scale, int* width, int* height, int* xoff, int* yoff,stbtt_vertex* invert,int vcount)
 {
     float scale_x = scale, scale_y = scale;
     int ix0, iy0, ix1, iy1;
@@ -4631,13 +4632,13 @@ STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float sca
 
         stbtt_vertex* verts = nullptr;
         int num_verts = 0;
-        if (gv->verts) {
+        if (!invert) {
             num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
         }
         else 
         {
-            verts = gv->verts;
-            num_verts = gv->ver_size;
+            verts = invert;
+            num_verts = vcount;
         }
 
         data = (unsigned char*)STBTT_malloc(w * h, info->userdata);
@@ -4790,7 +4791,8 @@ STBTT_DEF unsigned char* stbtt_GetGlyphSDF(const stbtt_fontinfo* info, float sca
             }
         }
         STBTT_free(precompute, info->userdata);
-        if (gv->verts) STBTT_free(verts, info->userdata);
+        if (!invert) 
+            STBTT_free(verts, info->userdata);
     }
     return data;
 }

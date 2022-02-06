@@ -31,6 +31,7 @@ Glyph_data FontData::GetGlyphBitmap_SDF_V(int glyph_index, float scale, Glyph_Da
 {
     int width, height, xoff, yoff;
     float sdf_scale = stbtt_ScaleForPixelHeight(&font, scale);
+        //Glyph_Vertices gv = glyph_list.at(glyph_index);
     //int advance, lsb;
     //stbtt_GetGlyphHMetrics(&font, glyph, &advance, &lsb);
     pixel_uc* pixels = nullptr;
@@ -38,8 +39,9 @@ Glyph_data FontData::GetGlyphBitmap_SDF_V(int glyph_index, float scale, Glyph_Da
         int  sdf_onedge_value = 170;
         float pixel_dist_scale = (sdf_onedge_value / sdf_padding);
     if (Info_Inquiry == Glyph_Data_Access::Bitmap_Write) {
-        Glyph_Vertices gv = glyph_list.at(glyph_index);
-        pixels = stbtt_GetGlyphSDF(&font, sdf_scale, visible_unique_indices.at(glyph_index), sdf_padding, sdf_onedge_value, pixel_dist_scale, &width, &height, &xoff, &yoff, &gv);
+        Glyph_Vertices &gv = glyph_list.at(glyph_index);
+        pixels = stbtt_GetGlyphSDF(&font, sdf_scale, visible_unique_indices.at(glyph_index), sdf_padding, 
+            sdf_onedge_value, pixel_dist_scale, &width, &height, &xoff, &yoff, gv.verts,gv.ver_size);
     }
     else {
         int ix0, iy0, ix1, iy1;

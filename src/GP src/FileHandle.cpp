@@ -5,7 +5,7 @@
 
 FileHandle::FileHandle(const char* filename, const char* mode, size_t* out_file_size)
 {
-    ASSERT("why ?", !(filename && mode) );
+    ASSERT("no mode or file name", !(filename || mode) );
     if (out_file_size)
         *out_file_size = 0;
 

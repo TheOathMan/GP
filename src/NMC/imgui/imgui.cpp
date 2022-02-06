@@ -1,4 +1,4 @@
-//[Edited]: this tage indicate a personl edit by the developer of this app
+//[Edited]: this tage indicate a personl edit by the developer of GP
 // dear imgui, v1.80 WIP
 // (main code and documentation)
 
@@ -3877,7 +3877,7 @@ void ImGui::NewFrame()
     // This fallback is particularly important as it avoid ImGui:: calls from crashing.
     g.WithinFrameScopeWithImplicitWindow = true;
     SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
-    Begin("Debug##Default");
+    Begin("Debug##Default",nullptr,ImGuiWindowFlags_NoSavedSettings); // [EDITED]  don't create a save file
     IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
@@ -10129,7 +10129,7 @@ void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
 
     size_t ini_data_size = 0;
     const char* ini_data = SaveIniSettingsToMemory(&ini_data_size);
-    ImFileHandle f = ImFileOpen(ini_filename, "wt");
+    ImFileHandle f = ini_data_size ? ImFileOpen(ini_filename, "wt") : nullptr; //[Edited] when there are no data to write, don't create an empty .init file
     if (!f)
         return;
     ImFileWrite(ini_data, sizeof(char), ini_data_size, f);

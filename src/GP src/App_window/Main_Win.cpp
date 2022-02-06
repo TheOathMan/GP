@@ -5,14 +5,11 @@
 [EVENTS IMPL]
 [GUI WIN CONTENT]
 [MAIN WIN CLASS IMPL]
-*/
-
-//------ Notes
-// sdf build his own verts making the verts edit usless in sdf
-// Log window seems off center
+*/ 
+//------ TODO:
 // I might need to add async load bars for image rendering 
 // make loading gui more flex 
-// g++ static lincage
+// g++ static lincage 
 
 #include "../defines.h"
 
@@ -20,7 +17,7 @@
     static_assert(false, " conflicting defines");
 #endif
 
-//----------------------------------[INCLUDE]----------------------------------
+//---------------------------------- [SECTION]: INCLUDE----------------------------------
 #include "Main_Win.h"
 
 #include "../Image.h"
@@ -44,7 +41,7 @@ std::string LogInfo(int line, const char* fileName);
 
 
 
- //----------------------------------[STATIC GLOBAL DATA]----------------------------------
+ //----------------------------------[SECTION]: STATIC GLOBAL DATA----------------------------------
 
 
 // windows size/pos variables
@@ -76,6 +73,7 @@ struct { bool is_working(){return false;}} loading_job ;
 #endif    
     int Total_Font_Load=0;
     bool open_log =false;
+    int SubWinsflags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
    // bool thread_working = false;
 } LoadList;
 
@@ -132,15 +130,15 @@ struct Loading_GUI {
   
         if (*open) {
             ImVec2 win_size = ImGui::GetWindowSize();
-            auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
+            ImVec2 nws(500,300);
             ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Once);
-            ImGui::SetNextWindowPos(ImVec2((win_size.x / 2.0f) - 200, (win_size.y / 2.0f) - 100), ImGuiCond_Once);
-            ImGui::Begin(log_name, open, flags, (int)Window_Resize_Dir::WRD_NONE);
+            ImGui::SetNextWindowPos(ImVec2((win_size.x / 2.0f) - nws.x/2.0f, (win_size.y / 2.0f) - nws.y/2.0f), ImGuiCond_Once);
+            ImGui::Begin(log_name, open, LoadList.SubWinsflags, (int)Window_Resize_Dir::WRD_NONE);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
             ImVec2 this_GwinSize = ImGui::GetWindowSize();
 
-            ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,flags);
+            ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,LoadList.SubWinsflags);
             for (size_t i = 0; i < log_lists.size(); i++)
             {
                 auto str = log_lists.at(i).c_str();
@@ -168,8 +166,8 @@ struct Loading_GUI {
             ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         }
         
-        // open loading window once the loading thread has started
-        if (ImGui::BeginPopupModal("Loading Fonts", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        // open loading window once the loading thread has started 
+        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags))
         {
             Current_Font_Load = list_size; //- loaded_fonts_size;
 
@@ -218,7 +216,7 @@ struct GUI_WINDOW {
     }
 };
 
- //----------------------------------[FUNCTIONS]----------------------------------
+ //---------------------------------- [SECTION]: FUNCTIONS ----------------------------------
 
 bool Selection_Gaurd() {
     if (!LoadList.loading_job.is_working() && !LoadList.loaded_fonts.empty() && fs.SelectedFont < LoadList.loaded_fonts.size() ) {
@@ -307,7 +305,6 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
 
         if (imgeType == Image_Type::SDF) {
             ft = Current_Font->GetGlyphBitmap_SDF_V(fs.SelectedGlyph, scale);
-            //ft = loaded_fonts.at(gs.SelectedFont)->GetGlyphBitmap_V(gs.SelectedGlyph, scale, gs.SDF_edgeOffset);
             glyphTex = new Image(ft.pixels, ft.width, ft.height, 1);
             if(GPU_Update) glyphTex->To_RBGA();
         }
@@ -345,7 +342,7 @@ void Process_Glyph_Textures(bool trigger = false) {
 }
 
 
-//-------------------------------------[EVENTS IMPL]-------------------------------------
+//-------------------------------------[SECTION]:EVENTS IMPL-------------------------------------
 
 void DeletFontDataCallback(const EventType& ev) {
     auto b = LoadList.loaded_fonts.begin();
@@ -478,7 +475,7 @@ void GlyphPageEnterCallback(const EventType& e) {
     GP_Print("Glyph Page entered");
 }
 
- //----------------------------------[GUI WIN CONTENT]----------------------------------
+ //----------------------------------[SECTION]: GUI WIN CONTENT----------------------------------
 
 void Main_Win::MainCanvesGUIWin() {
     if (!gs.glyph_edit) {
@@ -517,7 +514,7 @@ void Main_Win::MainCanvesGUIWin() {
             // Cell coloring 
             ImU32 cel_col = cellpicked == id ? IM_COL32(255, 255, 255, 200) : IM_COL32(255, 255, 255, 80);
             if (Selection_Gaurd())
-                if (CurGlyphPos >= Current_Font->get_glyph_listCC().size()) // ---------------------- ERROR (Possible thread related) 2
+                if (CurGlyphPos >= Current_Font->get_glyph_listCC().size()) // FIXME: Possible thread related error
                     cel_col = IM_COL32(255, 255, 255, 30);
 
             // Organizing cells horizontally
@@ -878,7 +875,8 @@ void Main_Win::GlyphProcessPages() {
                 int res_min = 100, res_max = 10000; Glyph_data res_data;
                 if (Selection_Gaurd()) {
                     res_data = Current_Font->GetGlyphPreData(fs.SelectedGlyph, gs.final_scale, (Image_Type)fs.glyph_setting, gs.SDF_edgeOffset);
-                    for (; Current_Font->GetGlyphPreData(fs.SelectedGlyph, res_max, (Image_Type)fs.glyph_setting, gs.SDF_edgeOffset).width > 4000 ||       //-- Error
+                    // FIXME: Possible rare thread related error
+                    for (; Current_Font->GetGlyphPreData(fs.SelectedGlyph, res_max, (Image_Type)fs.glyph_setting, gs.SDF_edgeOffset).width > 4000 ||
                            Current_Font->GetGlyphPreData(fs.SelectedGlyph, res_max, (Image_Type)fs.glyph_setting, gs.SDF_edgeOffset).height> 4000;
                         res_max -= 20) { }
                 }
@@ -1008,7 +1006,7 @@ void Main_Win::GlyphProcessPages() {
                         Event::Notify(OnRenderingPageGlyphs());
                     }
                     gs.glyph_edit = !gs.glyph_edit;
-                    sc = glyph_edit_mouse_control(); // reset
+                    sc = glyph_edit_mouse_control(); // reset TODO:
                 }
 
                 if (gs.glyph_edit) {
@@ -1160,7 +1158,7 @@ void Main_Win::MenuBar() {
     }
 }
 
- //----------------------------------[MAIN WIN CLASS IMPL]----------------------------------
+ //----------------------------------[SECTION]: MAIN WIN CLASS IMPL----------------------------------
 
 Main_Win::Main_Win(const char* window_name, int width, int height) : App_Window(window_name, width, height)
 {
@@ -1249,10 +1247,13 @@ void Main_Win::OnUpdate()
             GUI_WINDOW windowMen("WINDOW MENU BAR", ImVec2(0, 0), ImVec2(GPWins.cws.x, 20));
             MenuBar();
         }
-        ImGui::ShowDemoWindow();
 
         Event::Notify_Once(OnDeleteFontData());
     }
+
+#if defined Debug
+    //ImGui::ShowDemoWindow();
+#endif
 
     ImGui::Render();
     gui_spc->GUI_OnFrameEnd();
