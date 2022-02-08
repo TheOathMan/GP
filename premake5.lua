@@ -59,25 +59,16 @@ project "HelloWorld"
    cppdialect "C++11"
    targetdir ( BuidName .. "/bin/%{cfg.buildcfg}/%{prj.name}")
    objdir (BuidName .."/ints")
-   
-   --includedirs{"%{prj.location}/src/GLFW"}
-   --includedirs { BuidName.."/src/assets" }
+
 
    files {BuidName .."/src/**.h", BuidName .."/src/**.cpp"}
    links{ "glfw3","opengl32" }
+   libdirs { BuidName .."/src/NMC/GLFW/lib"}
    
-   filter "action:vs*"
-      libdirs { BuidName .."/src/NMC/GLFW/lib"}
-
    filter "action:gmake*"
-      links{ "comdlg32","ole32" }
-      libdirs { BuidName .."/src/NMC/GLFW/dll"}
-
-      -- use static runtime library on GCC builds
+      -- omdlg32, ole32 needed for tinyfolder. gdi32 needed for glfw
+      links{ "comdlg32","ole32","gdi32" } 
       buildoptions "-static-libstdc++"
-      postbuildcommands {
-         "{COPY} src/NMC/GLFW/dll/glfw3.dll %{cfg.targetdir}"
-       }
 
    filter "configurations:Debug"
       runtime "Debug"
