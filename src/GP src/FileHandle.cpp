@@ -3,49 +3,42 @@
 #include <vector>
 #include "FileHandle.h"
 
-FileHandle::FileHandle(const char* filename, const char* mode, size_t* out_file_size)
+FileHandle::FileHandle(const char* filename, FileBinAccess Binaccess) : file_size(0), file_data(nullptr), file(nullptr)
 {
-    ASSERT("no mode or file name", !(filename || mode) );
-    if (out_file_size)
-        *out_file_size = 0;
 
-    if ((file = FileOpen(filename, mode)) == NULL) {
+    const char* _io = Binaccess == FileBinAccess::READ ? "rb":"wb";
+
+    if ((file = FileOpen(filename, _io)) == NULL) {
         file_data = NULL;
         return; 
     }
 
-    size_t file_size = (size_t)FileSize();
-    if (file_size == (size_t)-1)
+    file_size = (size_t)FileSize();
+    if (!file_size)
     {
         FileClose();
-        file_data = NULL;
+        DE_NUL_A(file_data);
         return;
     }
 
     file_data = new(std::nothrow) uint8_t[file_size]; // return null of null has found instead of exception.
-    if (file_data == NULL)
+    if (!file_data)
     {
         FileClose();
-        file_data = NULL;
+        DE_NUL_A(file_data);
         return;
     }
     if (FileRead(file_data, 1, file_size) != file_size)
     {
         FileClose();
-        //IM_FREE(file_data);
-        file_data = NULL;
+        DE_NUL_A(file_data);
         return;
     }
-
-    if(mode != "wb") FileClose();
-    if (out_file_size)
-        *out_file_size = file_size;
-
 }
 
 FILE* FileHandle::FileOpen(const char* filename, const char* mode)
 {
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
     const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
@@ -83,7 +76,7 @@ U64 FileHandle::FileSize()
     sz = ftell(file);
     bool c2 = sz  != -1 && !fseek(file, off, SEEK_SET);
 
-    return c1 && c2 ? (U64)sz : (U64)-1;
+    return c1 && c2 ? (U64)sz : NULL;
 }
 U64 FileHandle::FileRead(void* data, U64 sz, U64 count)
 { 

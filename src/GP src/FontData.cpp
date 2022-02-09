@@ -128,14 +128,14 @@ Glyph_data FontData::GetGlyphPreData(int glyph_index, float scale, Image_Type ty
 void FontData::init()
 {
 
-    FileHandle font_file(font_path.c_str(), "rb", &m_fsize);
+    FileHandle font_file(font_path.c_str(), FileBinAccess::READ);
+    m_fsize = font_file.file_size;
     if (font_file.file_data) {
         font_binery_data = (uint8_t*)font_file.file_data;
         gui_handle = Gui_Handle::Visible;
     }
     else {
         gui_handle = Gui_Handle::Delete;
-
         return;
     }
 

@@ -1,6 +1,4 @@
 ---@diagnostic disable: undefined-global
- 
-
 
 
 newaction {
@@ -18,6 +16,10 @@ newaction {
    end
 }
 
+if string.find("gmake gmake2 vs2005 vs2008 vs2010 vs2012 vs2013 vs2015 vs2017 vs2019 vs2022 xcode4", _ACTION) == nil then do return end end
+
+BuidName = ""
+
 --copy folder and all its content from src to dst 
 function CopyFolder(src,dst)
    local fm = os.matchfiles( src .. "/**")
@@ -27,39 +29,29 @@ function CopyFolder(src,dst)
    for i, v in pairs(fm) do os.copyfile(v, dst .. "/" .. v) end
 end
 
-BuidName = ""
-Build_Actions = "gmake gmake2 vs2005 vs2008 vs2010 vs2012 vs2013 vs2015 vs2017 vs2019 vs2022 xcode4"
-
-if _ACTION ~= nil then
-   ActionIsOk = string.find(Build_Actions, _ACTION)
-end
 
 -- produce numbred builds in case of reproduction
-if ActionIsOk then
-   BuidName = _ACTION .. "-build"
-   local hm = os.matchdirs(_ACTION.."**")
-   if rawlen(hm) > 0 then
-      BuidName = _ACTION .. "-build" .. tostring(rawlen(hm))
-   end
-   CopyFolder("src",BuidName)
-   --CopyFolder("assets",BuidName)
+BuidName = _ACTION .. "-build"
+local hm = os.matchdirs(_ACTION.."-build**")
+if rawlen(hm) > 0 then
+   BuidName = _ACTION .. "-build" .. tostring(rawlen(hm))
 end
+CopyFolder("src",BuidName)
 
-workspace "HelloWorld"
+
+workspace "GP"
    configurations {"Debug","Release"}
-   --architecture "x64"
-   system("windows")
-   filename "GLFW Startup" --.sln
-   location (BuidName)
    architecture "x64"
+   system("windows")
+   filename "GLFW Startup" 
+   location (BuidName)
 
-project "HelloWorld"
+project "Glyph_Printer"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++11"
    targetdir ( BuidName .. "/bin/%{cfg.buildcfg}/%{prj.name}")
    objdir (BuidName .."/ints")
-
 
    files {BuidName .."/src/**.h", BuidName .."/src/**.cpp"}
    links{ "glfw3","opengl32" }
@@ -67,7 +59,8 @@ project "HelloWorld"
    
    filter "action:gmake*"
       -- omdlg32, ole32 needed for tinyfolder. gdi32 needed for glfw
-      links{ "comdlg32","ole32","gdi32" } 
+      links{ "comdlg32","ole32","gdi32" }
+      -- use static runtime library on GCC
       buildoptions "-static-libstdc++"
 
    filter "configurations:Debug"

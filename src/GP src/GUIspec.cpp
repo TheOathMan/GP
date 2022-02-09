@@ -379,16 +379,19 @@ void ShowStyleEditor(ImGuiStyle* ref)
     static ImGuiStyle ref_saved_style;
 
     if(ImGui::Button("Save Style")) {
-        FileHandle file("styledata.bin", "wb",NULL);
+        FileHandle file("styledata.bin", FileBinAccess::WRITE );
         file.FileWrite(&style, sizeof(char), sizeof(ImGuiStyle));
         file.FileClose();
     }
     ImGui::SameLine();
     if (ImGui::Button("Load style")) {
         ImGuiStyle* saved_style;
-        FileHandle file2("styledata.bin", "rb", NULL);
-        saved_style = (ImGuiStyle*)file2.file_data;
-        style = *saved_style;
+        FileHandle file("styledata.bin", FileBinAccess::READ);
+        if (file.file_data)
+        {
+            saved_style = (ImGuiStyle*)file.file_data;
+            style = *saved_style;
+        }
     }
 
     // Default to using internal storage as reference

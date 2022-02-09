@@ -1,12 +1,15 @@
 #pragma once
 #include "AppCore.h"
 
+enum class FileBinAccess {READ,WRITE};
+
 struct FileHandle {
 
-    void* file_data;
+    uchar* file_data;
     FILE* file;
+    size_t file_size;
 
-    FileHandle(const char* filename, const char* mode, size_t* out_file_size);
+    FileHandle(const char* filename, FileBinAccess Binaccess);
 
 	FILE* FileOpen(const char* filename, const char* mode);
     bool FileClose();
