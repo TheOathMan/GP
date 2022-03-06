@@ -26,6 +26,7 @@ public:
 	inline GLFWwindow* get_window()		  const { return window;}
 	inline const char* get_window_name()  const { return windowName;}
 	inline bool IsWindowOpen()					{ return !glfwWindowShouldClose(window); }
+	inline bool IsWindowVisible()               { int a; glfwGetWindowSize(window,&a,&a); return a;}
 private:
 	Image* bg_image;
 	void RawQuadTexture();

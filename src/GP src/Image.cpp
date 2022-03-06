@@ -7,7 +7,7 @@
 #include "../NMC/stb_image_handler/stb_image_write.h"
 
 #define SDF_IMPLEMENTATION
-#include "../NMC/sdf/sdf.h"
+//#include "../NMC/sdf/sdf.h"
 
 // ---------------- image access with ranged access(x,y)
 // _x = width acess, _y = height acess, _f = formate(one channel, two channel..etc), _edge_limit = -1 no edge limit
@@ -414,7 +414,7 @@ void Image::Clean()
 void Image::To_SDF(float rad)
 {
     //sdfCoverageToDistanceField(data, width, data, width, height, width);
-    sdfBuildDistanceField(data, width, rad, data, width, height, width);
+    //sdfBuildDistanceField(data, width, rad, data, width, height, width);
 
 }
 

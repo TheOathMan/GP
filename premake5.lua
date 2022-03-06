@@ -54,11 +54,12 @@ project "Glyph_Printer"
    objdir (BuidName .."/ints")
 
    files {BuidName .."/src/**.h", BuidName .."/src/**.cpp"}
-   links{ "glfw3","opengl32" }
    libdirs { BuidName .."/src/NMC/GLFW/lib"}
+   libdirs { BuidName .."/src/Resources"}
+   links{ "glfw3","opengl32","data64" }
    
    filter "action:gmake*"
-      -- omdlg32, ole32 needed for tinyfolder. gdi32 needed for glfw
+      -- omdlg32, ole32 needed for tinyfolder. gdi32 needed for glfw static linkage
       links{ "comdlg32","ole32","gdi32" }
       -- use static runtime library on GCC
       buildoptions "-static-libstdc++"

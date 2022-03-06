@@ -1,6 +1,7 @@
 #include "GP src/Blueprints.h"
 #include "GP src/App_window/Main_Win.h"
 #include "GP src/Event.h"
+//#pragma comment(lib, "glfw3")
 
 void* operator new (std::size_t sz) {
     //Debug("Allocationg: " << sz);
@@ -14,7 +15,7 @@ void* operator new (std::size_t sz) {
     throw std::bad_alloc{};
     // normally throw bad alloc
 }
-
+auto a =0x15B98;
 
 //void* operator new(size_t size)
 //{
@@ -30,7 +31,6 @@ void operator delete(void* ptr) noexcept {
 
 int main(int, char**)
 {
-    // Setup window
     glfwSetErrorCallback([](int error, const char* description) {fprintf(stderr, "Glfw Error %d: %s\n", error, description); });
     if (!glfwInit())
         return 1;

@@ -389,6 +389,11 @@ void WindowResizeCallback(const EventType& e) {
 void WindowFocusCallback(const EventType& e) {
     auto wr_e = static_cast<const OnWindowFocus&>(e);
     GPWins.IsFocused = wr_e.isFocused;
+    
+    //static int a,b;
+    //glfwGetWindowSize(  ,&a,&b);
+    //GP_Print("S1 " << a << "S2 " << b);
+    //GPWins.minimized = !wr_e.n_width && !glfwGetWindowSize().y; 
 }
 
 void GlyphPreviewRenderCallback(const EventType& e) {
@@ -1182,6 +1187,7 @@ void Main_Win::OnWindowAwake()
 {
     App_Window::OnWindowAwake();
     SetBackgroundColor(15, 15, 15);
+    glfwSetWindowMaximizeCallback(window, [](GLFWwindow*,int i) { GP_Print(i); }  );
 
     ///---------------- Register Window Events ---------------------------
     Event::Connect<OnFontsLoading>(FontsLoadingCallback);
@@ -1211,9 +1217,7 @@ void Main_Win::OnUpdate()
     ImGui::NewFrame();
     guiWindowsResizes(current);
 	//-----------------------------------------------------------VV
-    //std::wstring
-
-    if (!GPWins.minimized) {
+    if (IsWindowVisible()) {
         {
             GUI_WINDOW window1("WINDOW LHS", ImVec2(0.0f, 0.0f), ImVec2(GPWins.fgws.x, GPWins.cws.y), Window_Resize_Dir::WRD_RIGHT);
             GPWins.cgws_LHS = ImGui::GetWindowSize();
