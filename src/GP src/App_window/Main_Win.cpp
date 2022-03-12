@@ -39,7 +39,7 @@ std::string LogInfo(int line, const char* fileName);
 # define Current_Font         LoadList.loaded_fonts.at(fs.SelectedFont)
 # define Current_Glyph_Vertix Current_Font->get_glyph_listCC().at(fs.SelectedGlyph)
 
-
+void SetGUICenter(ImVec2 size);
 
  //----------------------------------[SECTION]: STATIC GLOBAL DATA----------------------------------
 
@@ -78,6 +78,7 @@ struct { bool is_working(){return false;}} loading_job ;
 } LoadList;
 
 
+static bool openAboutPopu = false; 
 
 // font/glyph selections properities --------------
 struct font_selections {
@@ -97,6 +98,7 @@ struct glypg_shape_edit {
     int SDF_edgeOffset = 4;
     int  final_scale = 200;
     bool glyph_edit=false;
+    Image checker;
 } gs;
 
 // mouse in controller in 2d space and grid
@@ -129,10 +131,7 @@ struct Loading_GUI {
     void Log( const char* log_name, bool* open, const char* msg, const std::vector<std::string>& log_lists) {
   
         if (*open) {
-            ImVec2 win_size = ImGui::GetWindowSize();
-            ImVec2 nws(500,300);
-            ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Once);
-            ImGui::SetNextWindowPos(ImVec2((win_size.x / 2.0f) - nws.x/2.0f, (win_size.y / 2.0f) - nws.y/2.0f), ImGuiCond_Once);
+            SetGUICenter(ImVec2(500,300));
             ImGui::Begin(log_name, open, LoadList.SubWinsflags, (int)Window_Resize_Dir::WRD_NONE);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
@@ -167,7 +166,7 @@ struct Loading_GUI {
         }
         
         // open loading window once the loading thread has started 
-        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags))
+        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) //!###########################################################
         {
             Current_Font_Load = list_size; //- loaded_fonts_size;
 
@@ -217,6 +216,13 @@ struct GUI_WINDOW {
 };
 
  //---------------------------------- [SECTION]: FUNCTIONS ----------------------------------
+
+
+void SetGUICenter(ImVec2 size){
+    ImVec2 win_size = ImGui::GetWindowSize();
+    ImGui::SetNextWindowSize(size, ImGuiCond_Once);
+    ImGui::SetNextWindowPos(ImVec2((win_size.x / 2.0f) - size.x/2.0f, (win_size.y / 2.0f) - size.y/2.0f), ImGuiCond_Once);
+}
 
 bool Selection_Gaurd() {
     if (!LoadList.loading_job.is_working() && !LoadList.loaded_fonts.empty() && fs.SelectedFont < LoadList.loaded_fonts.size() ) {
@@ -313,7 +319,7 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
         if (imgeType != Image_Type::SDF && bgColor && gl_color) {
             color_t col = config_Color(bgColor[0] * 255, bgColor[1] * 255, bgColor[2] * 255, 255);
             color_t col2 = config_Color(gl_color[0] * 255, gl_color[1] * 255, gl_color[2] * 255, 255);
-            glyphTex->SetColor2(col2, col);
+            glyphTex->overrideColors(col2, col);
         }
         if (GPU_Update) LoadImageToGPU(*glyphTex);
     }
@@ -399,6 +405,11 @@ void WindowFocusCallback(const EventType& e) {
 void GlyphPreviewRenderCallback(const EventType& e) {
     sc = glyph_edit_mouse_control(); // reset
     ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); // default setting
+
+    //New checkerboard image bg
+    gs.checker = std::move(Image(1920,fs.SelectedImage->Get_Height() + 40,4,true));
+    gs.checker.AlphaToCheckerboard(); 
+    LoadImageToGPU(gs.checker);
 }
 
 void RenderingPageGlyphsCallback(const EventType& e) {
@@ -420,14 +431,20 @@ void RenderingPageGlyphsCallback(const EventType& e) {
     }
 }
 
-void PreviewWinInitilizedCallback(const EventType& e) {
-    //Recognize event
+void PreviewWinInitilizedCallback(const EventType& e) { 
+    //Recognize event                                   
     auto win = static_cast<const OnPreviewWinInitialized&>(e);
     App_Window* s_win = reinterpret_cast<App_Window*>(win.window);
     // setup
     auto w = s_win->get_window();
     Image* img = nullptr;
     ImageProcess(img, gs.final_scale, (Image_Type)fs.glyph_setting, false, gs.gl_color, gs.BG_color);
+    //ImageProcess(img, gs.final_scale, Image_Type::Background, false, gs.gl_color, gs.BG_color);
+    //GP_Print(img->Get_Format());
+    color_t col = config_Color(255,0,0,0);
+    color_t col2 = config_Color(0,255,0,0);
+    //img->overrideColors(col,col2);
+    img->AlphaToCheckerboard();
 
     //update window size, view port size, close flag, visibility.
     glfwSetWindowSize(w, img->Get_Width(), img->Get_Height());
@@ -537,7 +554,7 @@ void Main_Win::MainCanvesGUIWin() {
                 ImGui::PushClipRect(cell_p1, cell_p2, true);
                 ImGui::SetCursorPos(ImVec2(cell_p1.x - offst.x, cell_p1.y - offst.y));
                 ImVec2 imagesize(thisImage->Get_Width(), thisImage->Get_Height());
-                if (cel_col != IM_COL32(255, 255, 255, 30) && Selection_Gaurd()) ImGui::Image((ImTextureID)(intptr_t)thisImage->Get_GPU_ID(), imagesize);
+                if (cel_col != IM_COL32(255, 255, 255, 30) && Selection_Gaurd()) ImGui::Image(IMID(thisImage->Get_GPU_ID()), imagesize);
 
                 ImGui::PopClipRect();
                 // are we hovering over this cell ?
@@ -554,7 +571,7 @@ void Main_Win::MainCanvesGUIWin() {
                     // right mouse click on a glyph
                     if (ImGui::IsMouseDown(1) && !fs.Disable_Glyph_Selection) {
                         ImGui::BeginTooltip();
-                        ImGui::Image((ImTextureID)(intptr_t)thisImage->Get_GPU_ID(), imagesize);
+                        ImGui::Image(IMID(thisImage->Get_GPU_ID()), imagesize);
                         ImGui::Text("Index Number: %i", CurGlyphPos);
                         ImGui::EndTooltip();
 
@@ -818,13 +835,9 @@ void Main_Win::GlyphProcessPages() {
         {
             if (entred.EditPage) { entred.EditPage = false; Event::Notify(OnEditPageEntered());}
             BIG_TEXT("Edit Glyph Image: "); GpGUI::SPINE();
-            //ImGui::SameLine(ImGui::GetWindowSize().x - 90.0f, 0.0f); ImGui::Button("Preview");
+            ImVec2 ChickerBoardPos = ImGui::GetCursorScreenPos(); //!-------
+            ImGui::Image(IMID(gs.checker.Get_GPU_ID()), ImVec2(gs.checker.Get_Width(), gs.checker.Get_Height()));
 
-            // Checker baord for image previewing. ---------------------------
-            ImVec2 ChickerBoardPos = ImGui::GetCursorScreenPos();
-            static float ChickerBoardHight = 120;
-            ImGuiColorEditFlags chickerBoardflags = ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop;
-            ImGui::ColorButton("##current", ImVec4(0.0f, 0.0f, 0.0f, 0.0f), chickerBoardflags, ImVec2(4000, ChickerBoardHight));
             GUI_SEPERATION;
 
             // preview glyph image ------------------ && gs.SelectedGlyph < gs.Glyphs_bitmap.size()
@@ -832,11 +845,8 @@ void Main_Win::GlyphProcessPages() {
             if (Selection_Gaurd() && fs.SelectedImage) {
                 int w = fs.SelectedImage->Get_Width(), h = fs.SelectedImage->Get_Height();
                 ImVec2 drawPos = ImVec2(ChickerBoardPos.x - (w / 2.0f) + GPWins.cgws_RHS.x / 2.0f, ChickerBoardPos.y + spacing / 2);
-                ImGui::GetWindowDrawList()->AddImage((ImTextureID)(intptr_t)fs.SelectedImage->Get_GPU_ID(), drawPos, ImVec2(drawPos.x + w, drawPos.y + h));
-                ChickerBoardHight = h + spacing;
+                ImGui::GetWindowDrawList()->AddImage(IMID(fs.SelectedImage->Get_GPU_ID()), drawPos, ImVec2(drawPos.x + w, drawPos.y + h));
             }
-            else ChickerBoardHight = 120;
-
             if (ImGui::BeginChild("child windodsw2"))
             {
 
@@ -1148,19 +1158,26 @@ void Main_Win::MenuBar() {
         }
         ImGui::EndMainMenuBar();
     }
+
     if (ImGui::BeginMainMenuBar())
     {
-        if (ImGui::BeginMenu("about"))
+        if (ImGui::BeginMenu("Help"))
         {
-            ShowAbout();
-
-            ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-            ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
+            if (ImGui::MenuItem("Github Page")) { 
+                system("start https://github.com/TheOathMan/GP");
+            }
+            if (ImGui::MenuItem("Usage")) { 
+                openAboutPopu=true;   
+                 //!###########################################################
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
+
+
+    
+
 }
 
  //----------------------------------[SECTION]: MAIN WIN CLASS IMPL----------------------------------
@@ -1204,7 +1221,10 @@ void Main_Win::OnWindowAwake()
 
     gui_spc = new GUIspec(window);
     GPWins.window_flags = gui_spc->window_flags;
-    //initial gui windows parts.
+
+    gs.checker = std::move(Image(1920,120,4,true));
+    gs.checker.AlphaToCheckerboard(); //!---//////////////////////////////////////////////////////////
+    LoadImageToGPU(gs.checker);
     GPWins.fgws = ImVec2(get_width() / 1.4f, get_height()/ 1.42f);
 }
 
@@ -1233,6 +1253,13 @@ void Main_Win::OnUpdate()
             char logmsg[254];
             sprintf(logmsg,"%i font files was successfully loaded \n%i font files failed to load",LoadList.Successful_laods,LoadList.Failed_Loads);
             LoadingGUI.Log("Log", &LoadList.open_log,logmsg, LoadList.TargetFontsNames);
+
+            if(openAboutPopu){ //!################################################
+                SetGUICenter(ImVec2(500,150));
+                ImGui::Begin("App Usage", &openAboutPopu, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
+                ImGui::TextWrapped("Drag and drop font files or go to file > open to add fonts. If a font file added succefully, all glyphs inside the selected font will be extracted for edit and save as image. Supported formates are ttf and otf. ");
+                ImGui::End();
+            }
         }
 
         {

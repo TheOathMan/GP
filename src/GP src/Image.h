@@ -14,6 +14,14 @@
 #define Get_Blue(col)  ((uint8_t*)&col)[2]
 #define Get_Alpha(col) ((uint8_t*)&col)[3]
 
+#define IMID(x) (ImTextureID)(intptr_t)x
+
+#define SET_COLS(col,r,g,b,a) do{\
+((uint8_t*)&col)[0] = r;\
+((uint8_t*)&col)[1] = g;\
+((uint8_t*)&col)[2] = b;\
+((uint8_t*)&col)[3] = a;}while(false)
+
 
 template <typename T>
 struct Raw_Image {
@@ -94,16 +102,17 @@ public:
 
     void WhiteToAlpha();
     void BlackToAlpha();
-    void FullAlpha();
+    //void FullAlpha();
     void Col_Reverse();
     void Vertical_Flip();
     void To_RBGA();
     void To_SDF(float radius);
+    void AlphaToCheckerboard();
 
-    // multiply colors with white
-    void SetColor(color_t& gcolor);
-    // multiply colors with black
-    void SetColor2(color_t& gcolor, color_t& color2);
+    // multiply colors with black and white
+    void overrideColors(color_t& on_black, color_t& on_white);
+    void SetColores(color_t colors);
+    void ColReset();
     void Clean();
 
 
@@ -120,14 +129,3 @@ Image& CaptureViewport();
 // upload texture to the gpu.
 uint LoadImageToGPU(Image& image);
 color_t config_Color(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha);
-
-
-namespace IPP {
-    extern float Outline_kernel[9];
-    extern float Blure_kernel[9];
-
-
-    Raw_Image<pixel_uc>* kernalProcess(const Raw_Image<pixel_uc>& im, float kernel[9]);
-    Raw_Image<pixel_uc>* Anti_Aliasing(Raw_Image<pixel_uc>& im);
-    Raw_Image<pixel_uc>* Trim(Raw_Image<pixel_uc>& im);
-}

@@ -13,6 +13,7 @@
 #define INSER_RESOURCES
 #include "../Resources/res.h"
 #endif
+#include <queue>
 
 namespace GpGUI {
     using namespace ImGui;
@@ -209,10 +210,11 @@ void GUIspec::GUI_OnDestruction()
     ImGui::DestroyContext();
 }
 
+//std::qui<char*> recentFonts;
+std::deque<std::string> recentPaths;
+
 void ShowMenuFile()
 {
-    static char recentFont[500]; //memset(recentFont, 0, 500);
-
     if (ImGui::MenuItem("Clean")) { 
         Event::Notify(OnAllFontsClear());
 
@@ -235,39 +237,37 @@ void ShowMenuFile()
 
         while (tkn) {
             paths.push_back(tkn);
-            strcpy_s(recentFont, tkn);
+            recentPaths.push_back(tkn);
+            if(recentPaths.size() > 10) recentPaths.pop_front();
             tkn = strtok_s(NULL, "|", &next_p);
             count++;
         }
         Event::Notify(OnFontsLoading(count, paths.data() ));
         free(tempstr);
     }
-    if (ImGui::BeginMenu("Open Recent"))
+    if (ImGui::BeginMenu("Open Recent")) //!###########################
     {
-        if (!strlen(recentFont))
+        if (recentPaths.size()==0)
             ImGui::MenuItem("(EMPTY)", NULL, false, false);
         else
-        {
-            char* fn;    
-            for (fn = recentFont + strlen(recentFont); fn > recentFont && fn[-1] != '\\' && fn[-1] != '/'; fn--) {};
-            if(ImGui::MenuItem(fn))
-            { 
-                //LoadFont_Path(recentFont); 
+        {      
+            for (size_t i = 0; i < recentPaths.size(); i++)
+            {
+                const char* fn;    
+                const char* cctrfp =recentPaths.at(i).data();
+                for (fn = cctrfp + strlen(cctrfp); fn > cctrfp && fn[-1] != '\\' && fn[-1] != '/'; fn--) {};
+                if(ImGui::MenuItem(fn))
+                { 
+                     Event::Notify(OnFontsLoading(1, &cctrfp ));
+                }
             }
+            
+
         }
         ImGui::EndMenu();
     }
 }
 
-void ShowAbout()
-{
-    ImGui::TextUnformatted("This file is about stuff");
-    if (ImGui::BeginMenu("style edit"))
-    {
-        //ShowStyleEditor();
-        ImGui::EndMenu();
-    }
-}
 
 
 

@@ -172,69 +172,63 @@ Vec3 To01_fVec3(pixel_uc r, pixel_uc g, pixel_uc b) {
 
  }
 
- void Image::FullAlpha()
- {
-     To_RBGA();
-     PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
-     //int sumcols = PIXEL[RED] + PIXEL[GREEN] + PIXEL[BLUE];
-             //int res = sumcols / 3;
-     SET_DEFAULT;
-     PIXEL[RED]   = PIXEL[ALPHA];
-     PIXEL[GREEN] = PIXEL[ALPHA];
-     PIXEL[BLUE]  = PIXEL[ALPHA];
-     PIXEL[ALPHA] = 255;
-     PIXEL_ACCESS_END;
 
- }
-
-
-
- void Image::SetColor(color_t& gl_color)
- {
+void  Image::SetColores(color_t colors){
      To_RBGA();
      PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
      SET_DEFAULT;
-
-     Vec3 p1 = To01_fVec3(PIXEL[RED],PIXEL[GREEN],PIXEL[BLUE]);
-     Vec3 p2 = To01_fVec3(Get_Red(gl_color), Get_Green(gl_color), Get_Blue(gl_color));
-    
-     PIXEL[RED]   = (p1.r * p2.r) * 255.0f;
-     PIXEL[GREEN] = (p1.g * p2.g) * 255.0f;
-     PIXEL[BLUE]  = (p1.b * p2.b) * 255.0f;
-
+     PIXEL[RED]   = Get_Red(colors);
+     PIXEL[GREEN] = Get_Green(colors);
+     PIXEL[BLUE]  = Get_Blue(colors);
+     PIXEL[ALPHA] = Get_Alpha(colors);
      PIXEL_ACCESS_END;
- }
+}
 
- void Image::SetColor2(color_t& gl_color, color_t& color2)
+void Image::ColReset(){
+    memset(data, 0, width * height * m_format);
+}
+
+//  void Image::FullAlpha()
+//  {
+//      To_RBGA();
+//      PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
+//      //int sumcols = PIXEL[RED] + PIXEL[GREEN] + PIXEL[BLUE];
+//              //int res = sumcols / 3;
+//      SET_DEFAULT;
+//      //PIXEL[RED]   = PIXEL[ALPHA];
+//      //PIXEL[GREEN] = PIXEL[ALPHA];
+//      //PIXEL[BLUE]  = PIXEL[ALPHA];
+//      PIXEL[ALPHA] = 0;
+//      PIXEL_ACCESS_END;
+
+//  }
+ void Image::overrideColors(color_t& on_black, color_t& on_white)
  {
-     To_RBGA();// make sure we are deeling with three channels
-     PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
-     SET_DEFAULT;
+    To_RBGA();// make sure we are deeling with three channels
+    PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
+    SET_DEFAULT;
 
-     Vec3 p = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-     Vec3 p1 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
+    Vec3 p , p1 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
+    p.r = 1 - p1.r;
+    p.g = 1 - p1.g;
+    p.b = 1 - p1.b;
 
-     p.r = 1 - p1.r;
-     p.g = 1 - p1.g;
-     p.b = 1 - p1.b;
+    Vec3 out =  To01_fVec3(Get_Red(on_black), Get_Green(on_black), Get_Blue(on_black));
+    Vec3 out2 = To01_fVec3(Get_Red(on_white), Get_Green(on_white), Get_Blue(on_white));
 
-     Vec3 out =  To01_fVec3(Get_Red(gl_color), Get_Green(gl_color), Get_Blue(gl_color));
-     Vec3 out2 = To01_fVec3(Get_Red(color2), Get_Green(color2), Get_Blue(color2));
+    p.r = (p.r * out.r);
+    p.g = (p.g * out.g);
+    p.b = (p.b * out.b);
 
-     p.r = (p.r * out.r);
-     p.g = (p.g * out.g);
-     p.b = (p.b * out.b);
+    p1.r = (p1.r * out2.r);
+    p1.g = (p1.g * out2.g);
+    p1.b = (p1.b * out2.b);
 
-     p1.r = (p1.r * out2.r);
-     p1.g = (p1.g * out2.g);
-     p1.b = (p1.b * out2.b);
+    PIXEL[RED]   = (p.r + p1.r) * 255.0f;
+    PIXEL[GREEN] = (p.g + p1.g) * 255.0f;
+    PIXEL[BLUE]  = (p.b + p1.b) * 255.0f;
 
-     PIXEL[RED]   = (p.r + p1.r) * 255.0f;
-     PIXEL[GREEN] = (p.g + p1.g) * 255.0f;
-     PIXEL[BLUE]  = (p.b + p1.b) * 255.0f;
-
-     PIXEL_ACCESS_END;
-
+    PIXEL_ACCESS_END;
  }
 
  color_t config_Color(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
@@ -253,7 +247,6 @@ Vec3 To01_fVec3(pixel_uc r, pixel_uc g, pixel_uc b) {
  {
      if (m_format == (int)Color_Channel::CL_RGBA) 
          return;
-     
      pixel_uc* newData = new pixel_uc[(width + 0) * (height + 0) * 4];
 
      for (size_t i = 0; i < width * height; i++)
@@ -295,6 +288,31 @@ Vec3 To01_fVec3(pixel_uc r, pixel_uc g, pixel_uc b) {
  {
      stbi__vertical_flip(data, width, height,m_format);
  }
+
+void Image::AlphaToCheckerboard(){
+    To_RBGA();
+    //float scale=Get_Height()/2.0f;
+    float scale=24.0f;
+    PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
+    SET_DEFAULT;
+    float cx = Repeat<float>(_x,scale);
+    float cy = Repeat<float>(_y,scale);
+    float fc = 0;
+    int col1 = 188, col2 = 95;
+    float hfscl = scale /2.0f;
+    if(cy < hfscl) fc = cx < hfscl ? col2 : col1;
+    if(cy > hfscl) fc = cx < hfscl ? col1 : col2;
+    if(cy == hfscl)fc =  (col1 + col2) >> 1;
+    float inalph = 1.0f -  COL8_TO_F(PIXEL[ALPHA]);
+    float alpha  = COL8_TO_F(PIXEL[ALPHA]);
+
+    PIXEL[RED]   = (fc * inalph) + PIXEL[RED]   *  alpha;
+    PIXEL[GREEN] = (fc * inalph) + PIXEL[GREEN] *  alpha;
+    PIXEL[BLUE]  = (fc * inalph) + PIXEL[BLUE]  *  alpha;
+    PIXEL[ALPHA]  = 255;
+    PIXEL_ACCESS_END;
+}
+
 
 Image& CaptureViewport()
 {
@@ -387,7 +405,7 @@ Image& CaptureViewport()
      ImagePath = std::move(other.ImagePath);
      image_id = std::move(other.image_id);other.image_id=0;
      data = std::move(other.data);other.data=nullptr;
-     PixelMapPointes = std::move(other.PixelMapPointes);
+     PixelMapPointes = std::move(other.PixelMapPointes);other.PixelMapPointes=nullptr;
      return *this;
  }
 
@@ -405,191 +423,3 @@ void Image::Clean()
     
 }
 
-
-//--------------------------------------------------------------------
-//----------------------------  S D F  -------------------------------
-//--------------------------------------------------------------------
-
-
-void Image::To_SDF(float rad)
-{
-    //sdfCoverageToDistanceField(data, width, data, width, height, width);
-    //sdfBuildDistanceField(data, width, rad, data, width, height, width);
-
-}
-
-namespace IPP {
-
-    float Outline_kernel[9]{ // outline
-    -1, -1, -1,
-    -1,  8, -1,
-    -1, -1, -1
-    };
-
-    float Blure_kernel[9]{
-        1.0 / 16, 2.0 / 16, 1.0 / 16,
-        2.0 / 16, 4.0 / 16, 2.0 / 16,
-        1.0 / 16, 2.0 / 16, 1.0 / 16
-    };
-
-    Raw_Image<pixel_uc>* kernalProcess(const Raw_Image<pixel_uc>& im, float kernel1[9]) {
-        //sample--
-        Image* img = new Image(im.Get_Width(), im.Get_Height() ,3,true);
-        SET_EDGE_LIMIT(1);
-        PIXEL_ACCESS_BEGIN(im.Get_Width(), im.Get_Height(), im.Get_Format(), im.PixelMapPointes);
-
-        //int limit = 1;
-        Vec3 col = Vec3();
-
-            SET_PIXEL(-1, 1);
-            Vec3 p1 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(0, 1);
-            Vec3 p2 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(1, 1);
-            Vec3 p3 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(-1, 0);
-            Vec3 p4 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_DEFAULT;
-            Vec3 p5 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-
-            SET_PIXEL(1, 0);
-            Vec3 p6 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(-1, -1);
-            Vec3 p7 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(0, -1);
-            Vec3 p8 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_PIXEL(1, -1);
-            Vec3 p9 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-            SET_DEFAULT;
-
-            Vec3 samples[] = {p1,p2,p3,p4,p5,p6,p7,p8,p9};
-
-            for (int i = 0; i < 9; i++) {
-                col.r += samples[i].r * kernel1[i];
-                col.g += samples[i].g * kernel1[i];
-                col.b += samples[i].b * kernel1[i];
-            }
-
-            Img_Ac_s(img, x__, y__, 0) = (pixel_uc)(Clamp01(col.r) * UCHAR_MAX);
-            Img_Ac_s(img, x__, y__, 1) = (pixel_uc)(Clamp01(col.g) * UCHAR_MAX);
-            Img_Ac_s(img, x__, y__, 2) = (pixel_uc)(Clamp01(col.b) * UCHAR_MAX);        
-
-        PIXEL_ACCESS_END;
-
-        return img;
-    }
-
-    Raw_Image<pixel_uc>* Anti_Aliasing(Raw_Image<pixel_uc>& im) {
-
-        Raw_Image <pixel_uc>* mask = kernalProcess(im, Outline_kernel);
-        //sample--
-
-        Raw_Image<pixel_uc>* out = new Raw_Image<pixel_uc>(im.Get_Width(), im.Get_Height(), 3, true);
-
-        SET_EDGE_LIMIT(1);
-        PIXEL_ACCESS_BEGIN(im.Get_Width(), im.Get_Height(), im.Get_Format(), im.PixelMapPointes);
-
-        //int limit = 1;
-        Vec3 col = Vec3();
-
-        SET_PIXEL(-1, 1);
-        Vec3 p1 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(0, 1);
-        Vec3 p2 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(1, 1);
-        Vec3 p3 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(-1, 0);
-        Vec3 p4 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_DEFAULT;
-        Vec3 p5 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-
-        SET_PIXEL(1, 0);
-        Vec3 p6 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(-1, -1);
-        Vec3 p7 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(0, -1);
-        Vec3 p8 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_PIXEL(1, -1);
-        Vec3 p9 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
-        SET_DEFAULT;
-
-        Vec3 samples[] = { p1,p2,p3,p4,p5,p6,p7,p8,p9 };
-        float masking = To01_fVec3(Img_Ac_s(mask, x__, y__, 0), 0, 0).x;
-
-        if (masking > 0.65f) {
-
-            for (int i = 0; i < 9; i++) {
-                col.r += samples[i].r * Blure_kernel[i];
-                col.g += samples[i].g * Blure_kernel[i];
-                col.b += samples[i].b * Blure_kernel[i];
-            }
-        }
-        else {
-            col.r = p5.r;
-            col.g = p5.g;
-            col.b = p5.b;
-        }
-
-        Img_Ac_s(out, x__, y__, 0) = (pixel_uc)(Clamp01(col.r) * UCHAR_MAX);
-        Img_Ac_s(out, x__, y__, 1) = (pixel_uc)(Clamp01(col.g) * UCHAR_MAX);
-        Img_Ac_s(out, x__, y__, 2) = (pixel_uc)(Clamp01(col.b) * UCHAR_MAX);
-
-        PIXEL_ACCESS_END;
-
-        delete mask;
-
-        return out;
-    }
-
-
-    Raw_Image<pixel_uc>* Trim(Raw_Image<pixel_uc>& im) {
-
-        //sample--
-
-        Vec<2,int> p1(20000, 20000);
-        Vec<2,int> p2;
-        
-        int hw = im.Get_Width() / 2;
-        int hh = im.Get_Height() / 2;
-
-
-        SET_EDGE_LIMIT(1);
-        PIXEL_ACCESS_BEGIN(im.Get_Width(), im.Get_Height(), im.Get_Format(), im.PixelMapPointes);
-        SET_DEFAULT;
-        if (PIXEL[RED] != 0 || PIXEL[GREEN] != 0 || PIXEL[BLUE] != 0) {
-
-            if (x__ < hw) 
-                if (x__ < p1.x)
-                    p1.x = x__;
-                
-            if (x__ > hw) 
-                if (x__ > p2.x)
-                    p2.x = x__;
-
-            if (y__ < hh)
-                if (y__ < p1.y)
-                    p1.y = y__;
-
-            if (y__ > hh)
-                if (y__ > p2.y)
-                    p2.y = y__;
-        } //-------------
-        PIXEL_ACCESS_END;
-
-        Vec<2, int > newRes(p2.x - p1.x, p2.y - p1.y);
-        Raw_Image<pixel_uc>* out = new Raw_Image<pixel_uc>(newRes.x, newRes.y, im.Get_Format(), true);
-        {
-            PIXEL_ACCESS_BEGIN(im.Get_Width(), im.Get_Height(), im.Get_Format(), im.PixelMapPointes);
-            SET_DEFAULT;
-
-
-
-            PIXEL_ACCESS_END; 
-        }
-
-
-        return out;
-    }
-
-
-}

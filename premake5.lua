@@ -29,7 +29,6 @@ function CopyFolder(src,dst)
    for i, v in pairs(fm) do os.copyfile(v, dst .. "/" .. v) end
 end
 
-
 -- produce numbred builds in case of reproduction
 BuidName = _ACTION .. "-build"
 local hm = os.matchdirs(_ACTION.."-build**")
@@ -38,6 +37,7 @@ if rawlen(hm) > 0 then
 end
 CopyFolder("src",BuidName)
 
+--if string.find("gmake gmake2",_ACTION) ~= nil then os.copyfile("compile_and_run.bat", BuidName .. "/compile_and_run.bat") end
 
 workspace "GP"
    configurations {"Debug","Release"}

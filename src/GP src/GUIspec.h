@@ -25,7 +25,6 @@ private:
 	GLFWwindow* window;
 };
 void ShowMenuFile();
-void ShowAbout();
 void ShowStyleEditor(ImGuiStyle* ref = NULL);
 namespace GpGUI {
 	bool BufferingBar(const char* label, float value, const ImVec2& size_arg);
