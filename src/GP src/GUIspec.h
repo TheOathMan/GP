@@ -1,6 +1,7 @@
 #pragma once
 #include "AppCore.h"
 #include "../NMC/imgui/imgui.h"
+#include <queue>
 
 //#include "App_window/Main_Win.h"
 struct  GLFWwindow;
@@ -33,3 +34,6 @@ namespace GpGUI {
 	bool LinkedCheckBox(const char* name, int* v, int val);
 	void SPINE(float x = 0, float y = 0, float x1 = 0, float y1 = 0);
 }
+
+extern std::deque<std::string> OpenRecentP;
+extern std::deque<std::string> DropRecentP;

@@ -9,7 +9,7 @@ std::vector<App_Window*> App_Window::wins32;
 
 static void drop_callback(GLFWwindow* window, int count, const char** paths)
 {
-    Event::Notify(OnFontsLoading(count, paths));
+    Event::Notify(OnFontsLoading(count, paths,1));
 }
 
 static void window_resize_callback(GLFWwindow* window, int n_width, int n_height) 

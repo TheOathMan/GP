@@ -166,7 +166,7 @@ struct Loading_GUI {
         }
         
         // open loading window once the loading thread has started 
-        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) //!###########################################################
+        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) 
         {
             Current_Font_Load = list_size; //- loaded_fonts_size;
 
@@ -363,13 +363,23 @@ void FontsLoadingCallback(const EventType& e) {
     LoadingGUI = Loading_GUI();
     auto db_e = static_cast<const OnFontsLoading&>(e);
     int count = db_e.count;
+    int isDrop = db_e.isDrop;
     //GP_Print("hello");
     if (!count)return;
     const char** paths = db_e.paths;
     
     if (LoadList.loading_job.is_working()) return;
     std::vector<std::string> g_spath; // hard copy needed for laoding thread
-    for (size_t i = 0; i < count; i++) { g_spath.push_back(paths[i]); }
+    for (size_t i = 0; i < count; i++) { 
+        g_spath.push_back(paths[i]);
+        if(!isDrop){
+            OpenRecentP.push_back(paths[i]);
+            if(OpenRecentP.size() > 10) OpenRecentP.pop_front();}
+        else{       
+            DropRecentP.push_back(paths[i]);
+            if(DropRecentP.size() > 10) DropRecentP.pop_front();
+        } 
+     }
 
 
 #if defined ASYNC_METHOD_THREADING
@@ -407,9 +417,11 @@ void GlyphPreviewRenderCallback(const EventType& e) {
     ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); // default setting
 
     //New checkerboard image bg
-    gs.checker = std::move(Image(1920,fs.SelectedImage->Get_Height() + 40,4,true));
-    gs.checker.AlphaToCheckerboard(); 
-    LoadImageToGPU(gs.checker);
+    if (Selection_Gaurd()) {
+        gs.checker = std::move(Image(1920, fs.SelectedImage->Get_Height() + 40, 4, true));
+        gs.checker.AlphaToCheckerboard();
+        LoadImageToGPU(gs.checker);
+    }
 }
 
 void RenderingPageGlyphsCallback(const EventType& e) {
@@ -1168,16 +1180,11 @@ void Main_Win::MenuBar() {
             }
             if (ImGui::MenuItem("Usage")) { 
                 openAboutPopu=true;   
-                 //!###########################################################
             }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
-    }
-
-
-    
-
+    }  
 }
 
  //----------------------------------[SECTION]: MAIN WIN CLASS IMPL----------------------------------
@@ -1223,7 +1230,7 @@ void Main_Win::OnWindowAwake()
     GPWins.window_flags = gui_spc->window_flags;
 
     gs.checker = std::move(Image(1920,120,4,true));
-    gs.checker.AlphaToCheckerboard(); //!---//////////////////////////////////////////////////////////
+    gs.checker.AlphaToCheckerboard(); 
     LoadImageToGPU(gs.checker);
     GPWins.fgws = ImVec2(get_width() / 1.4f, get_height()/ 1.42f);
 }
@@ -1254,7 +1261,7 @@ void Main_Win::OnUpdate()
             sprintf(logmsg,"%i font files was successfully loaded \n%i font files failed to load",LoadList.Successful_laods,LoadList.Failed_Loads);
             LoadingGUI.Log("Log", &LoadList.open_log,logmsg, LoadList.TargetFontsNames);
 
-            if(openAboutPopu){ //!################################################
+            if(openAboutPopu){ 
                 SetGUICenter(ImVec2(500,150));
                 ImGui::Begin("App Usage", &openAboutPopu, ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoSavedSettings);
                 ImGui::TextWrapped("Drag and drop font files or go to file > open to add fonts. If a font file added succefully, all glyphs inside the selected font will be extracted for edit and save as image. Supported formates are ttf and otf. ");

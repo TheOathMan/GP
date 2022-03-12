@@ -13,7 +13,6 @@
 #define INSER_RESOURCES
 #include "../Resources/res.h"
 #endif
-#include <queue>
 
 namespace GpGUI {
     using namespace ImGui;
@@ -211,7 +210,8 @@ void GUIspec::GUI_OnDestruction()
 }
 
 //std::qui<char*> recentFonts;
-std::deque<std::string> recentPaths;
+std::deque<std::string> OpenRecentP;
+std::deque<std::string> DropRecentP;
 
 void ShowMenuFile()
 {
@@ -237,32 +237,48 @@ void ShowMenuFile()
 
         while (tkn) {
             paths.push_back(tkn);
-            recentPaths.push_back(tkn);
-            if(recentPaths.size() > 10) recentPaths.pop_front();
             tkn = strtok_s(NULL, "|", &next_p);
             count++;
         }
         Event::Notify(OnFontsLoading(count, paths.data() ));
         free(tempstr);
     }
-    if (ImGui::BeginMenu("Open Recent")) //!###########################
+    if (ImGui::BeginMenu("Open Recent")) 
     {
-        if (recentPaths.size()==0)
+        if (OpenRecentP.size()==0)
             ImGui::MenuItem("(EMPTY)", NULL, false, false);
         else
         {      
-            for (size_t i = 0; i < recentPaths.size(); i++)
+            for (size_t i = 0; i < OpenRecentP.size(); i++)
             {
                 const char* fn;    
-                const char* cctrfp =recentPaths.at(i).data();
+                const char* cctrfp =OpenRecentP.at(i).data();
                 for (fn = cctrfp + strlen(cctrfp); fn > cctrfp && fn[-1] != '\\' && fn[-1] != '/'; fn--) {};
                 if(ImGui::MenuItem(fn))
                 { 
                      Event::Notify(OnFontsLoading(1, &cctrfp ));
                 }
             }
-            
+        }
+        ImGui::EndMenu();
+    }
 
+    if (ImGui::BeginMenu("Drop Recent")) 
+    {
+        if (DropRecentP.size()==0)
+            ImGui::MenuItem("(EMPTY)", NULL, false, false);
+        else
+        {      
+            for (size_t i = 0; i < DropRecentP.size(); i++)
+            {
+                const char* fn;    
+                const char* cctrfp =DropRecentP.at(i).data();
+                for (fn = cctrfp + strlen(cctrfp); fn > cctrfp && fn[-1] != '\\' && fn[-1] != '/'; fn--) {};
+                if(ImGui::MenuItem(fn))
+                { 
+                     Event::Notify(OnFontsLoading(1, &cctrfp ));
+                }
+            }
         }
         ImGui::EndMenu();
     }

@@ -62,7 +62,8 @@ struct OnPreviewWinInitialized : EventType {
 struct OnFontsLoading : EventType {
 	int count;
 	const char** paths;
-	OnFontsLoading(int count, const char** paths) :count(count), paths(paths){};
+	bool isDrop;
+	OnFontsLoading(int count, const char** paths,int d=0) :count(count), paths(paths),isDrop(d){};
 };
 struct OnWindowResize : EventType {
 	int n_width;

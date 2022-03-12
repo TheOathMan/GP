@@ -3,6 +3,7 @@
 #include "Blueprints.h"
 #include "AppCore.h"
 #include "../NMC/imgui/imstb_truetype.h"
+#include <queue>
 
 
 struct Ranged_Font_Bitmap_data { // FontData.cpp
@@ -72,4 +73,5 @@ private:
 };
 
 Ranged_Font_Bitmap_data RangedBitmapDraw(const FontData& font_data, int firstchar, int charnums, float glyphPosH, int res);
+
 //void DrawRawOpengl(const GLuint id);
