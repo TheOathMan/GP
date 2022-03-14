@@ -13,6 +13,7 @@
 #define INSER_RESOURCES
 #include "../Resources/res.h"
 #endif
+//#include "../NMC/dirent/dirent.h"
 
 namespace GpGUI {
     using namespace ImGui;

@@ -86,8 +86,8 @@ public:
 	Image();
     // load from path
 	Image(const char* path, bool flip = false);
-    // data ownership will be stolen
-	Image(pixel_uc* data, int width,int hight,int format);
+	Image(const pixel_uc* data, int width,int hight,int format);
+	Image(pixel_uc *(&&data), int width,int hight,int format);
     Image(int w, int h, int f, bool setTo0 = false) : Raw_Image<pixel_uc>(w, h, f, setTo0) {};
 
     // copy operations

@@ -138,22 +138,14 @@ void FontData::init()
         gui_handle = Gui_Handle::Delete;
         return;
     }
-
-    if (!stbtt_InitFont(&font, font_binery_data, 0)) {
+    if (font_binery_data == nullptr || !stbtt_InitFont(&font, font_binery_data, 0)) {
         gui_handle = Gui_Handle::Delete;
         return;
     }
-    //int len=0;   
-    //const char* fname = stbtt_GetFontNameString(&font, &len, STBTT_PLATFORM_ID_MICROSOFT, STBTT_MS_EID_UNICODE_BMP, STBTT_MS_LANG_ENGLISH, 1);
-    //std::string ss(fname);
-    //GP_Print("%s",ss);
 
     TotalGlyphs = font.numGlyphs;
     for (size_t i = 0; i < USHORT_MAX; i++)
     {
-        //int advance, lsb;
-        //stbtt_GetGlyphHMetrics(&font, i, &advance, &lsb);
-
         if (i >= TotalGlyphs) break;
 
         int  x0, y0, x1, y1;

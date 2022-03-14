@@ -6,10 +6,12 @@
 [GUI WIN CONTENT]
 [MAIN WIN CLASS IMPL]
 */ 
-//------ TODO:
-// I might need to add async load bars for image rendering 
-// make loading gui more flex 
-// g++ static lincage 
+//TODO -----------------------
+// when window dl crampped up, it crashes
+// files that have a none font extention, crashes
+//loading more than once causes lag
+// 
+// 
 
 #include "../defines.h"
 
@@ -25,12 +27,12 @@
 #include "../Blueprints.h"
 #include "../FontData.h"
 #include "../Job.h"
+#include "../ReadDir.h"
 #include "../FileHandle.h"
 #include "../../NMC/imgui/imgui.h"
 #include "../../NMC/GLFW/glfw3.h"
 #include "../../NMC/tinydialog/tinyfiledialogs.h"
 #include "../../NMC/imgui/imgui_internal.h"
-
 std::string LogInfo(int line, const char* fileName);
 
 
@@ -245,10 +247,11 @@ int LoadFont_Path(const char* path) {
 
     char lfile_name[252]; strcpy(lfile_name, file_name); 
     Tolower(lfile_name);
-
+    char * ptr;
+    for(ptr = lfile_name + strlen(lfile_name);*ptr!='.'; --ptr){}
 
     for (int i=0;i< IM_ARRAYSIZE(formats);i++)
-        if (!strstr(lfile_name,formats[i])) {
+        if (!strcmp(ptr,formats[i])) { //! not accurate\ not stable ------------- non extension files crashes
             auto fd = std::make_shared<FontData>(path, file_name);
             if (fd->gui_handle != Gui_Handle::Delete) { // meaning loading the font was successful
                 LoadList.loaded_fonts.push_back(fd);
@@ -281,6 +284,7 @@ void FontLoadingJob(std::vector<std::string>&& fonst_paths, const int count) {
         LoadList.NewLoad();
         LoadList.Total_Font_Load = count;
         for (int i = 0; i < count; i++) {
+            //GP_Print(fonst_paths[i].c_str()); //!&&&&&&&&&&&&&&&&&&
             LoadFont_Path(fonst_paths[i].c_str());
         }
     }
@@ -295,23 +299,21 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
     if (Selection_Gaurd()) {
         if (imgeType == Image_Type::Alpha) {
             ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale);
-            glyphTex = new Image(ft.pixels, ft.width, ft.height, 1);
+            glyphTex = new Image(std::move(ft.pixels), ft.width, ft.height, 1);
             glyphTex->BlackToAlpha();
         }
 
         if (imgeType == Image_Type::Background) {
             ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale, gs.SDF_edgeOffset);
-            glyphTex = new Image(ft.pixels, ft.width, ft.height, 1);
+            glyphTex = new Image(std::move(ft.pixels), ft.width, ft.height, 1);
             // turn it to 4 channles when we want to send it to the GPU only.
             // other than that, make it 4 channles only when we adjust colors at SetColor2(col2, col)
             if (GPU_Update) glyphTex->To_RBGA();
-
-            //IPP::Trim(*glyphTex);
         }
 
         if (imgeType == Image_Type::SDF) {
             ft = Current_Font->GetGlyphBitmap_SDF_V(fs.SelectedGlyph, scale);
-            glyphTex = new Image(ft.pixels, ft.width, ft.height, 1);
+            glyphTex = new Image(std::move(ft.pixels), ft.width, ft.height, 1);
             if(GPU_Update) glyphTex->To_RBGA();
         }
         
@@ -373,10 +375,10 @@ void FontsLoadingCallback(const EventType& e) {
     for (size_t i = 0; i < count; i++) { 
         g_spath.push_back(paths[i]);
         if(!isDrop){
-            OpenRecentP.push_back(paths[i]);
+            OpenRecentP.push_back(paths[i]); //!############################# Might save a none font file
             if(OpenRecentP.size() > 10) OpenRecentP.pop_front();}
         else{       
-            DropRecentP.push_back(paths[i]);
+            DropRecentP.push_back(paths[i]); //!############################# Might save a none font file
             if(DropRecentP.size() > 10) DropRecentP.pop_front();
         } 
      }
@@ -434,7 +436,7 @@ void RenderingPageGlyphsCallback(const EventType& e) {
             //GP_Print("%i", i);
             if (i - CurGlyphPos > CELLS_NUMBER) break;
             Glyph_data ft = Current_Font->GetGlyphBitmap_V(i, 150.0f);
-            LoadList.loaded_bitmaps.push_back(std::make_shared<Image>(ft.pixels, ft.width, ft.height, 1));
+            LoadList.loaded_bitmaps.push_back(std::make_shared<Image>( std::move(ft.pixels), ft.width, ft.height, 1));
             Image& im = *LoadList.loaded_bitmaps.back();
             im.BlackToAlpha(); LoadImageToGPU(im);
         }
@@ -1159,6 +1161,7 @@ void Main_Win::FontSelections() {
 
 
 }
+
 void Main_Win::MenuBar() {
 
     if (ImGui::BeginMainMenuBar())
@@ -1181,12 +1184,17 @@ void Main_Win::MenuBar() {
             if (ImGui::MenuItem("Usage")) { 
                 openAboutPopu=true;   
             }
+            if (ImGui::MenuItem("Load Windows Fonts")) { 
+                ReadDir rd(std::string(getenv("SystemRoot")) + "\\Fonts");
+                //list_directory((std::string(getenv("SystemRoot")) + "\\Fonts\\").c_str()); //!########################
+                Event::Notify(OnFontsLoading(rd.GetFilePath().size(), rd.GetFilePath().data() ));
+                
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }  
 }
-
  //----------------------------------[SECTION]: MAIN WIN CLASS IMPL----------------------------------
 
 Main_Win::Main_Win(const char* window_name, int width, int height) : App_Window(window_name, width, height)
@@ -1204,8 +1212,6 @@ Main_Win::~Main_Win()
     // Cleanup
     gui_spc->GUI_OnDestruction();
 }
-
-std::vector<int> nums;
 
 void Main_Win::OnWindowAwake()
 {

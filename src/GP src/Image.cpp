@@ -325,7 +325,7 @@ Image& CaptureViewport()
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, data);
     stbi__vertical_flip(data, w, h, format);
     //stbi_write_png("dvsvs.png", w, h, format, data, w * format);
-    static Image fim(data, w, h, format);
+    static Image fim(std::move(data), w, h, format);
     return fim;
 }
 
@@ -343,18 +343,26 @@ Image& CaptureViewport()
      PIXEL_ACCESS_END;
 }
  Image::Image(const char* path, bool flip) : ImagePath(path) {
-     Clean();
+    Clean();
     stbi_set_flip_vertically_on_load(flip);
     data = stbi_load(ImagePath, &width, &height, &m_format, 0);
     PixelMapPointes = new pixel_uc * [height];   // allocate space for row pointers
     for (int i = 0; i < height; i++)
         PixelMapPointes[i] = data + (i * width * m_format);
  }
- Image::Image(pixel_uc* d, int w, int h, int f) : ImagePath("")
+ Image::Image(const pixel_uc* d, int w, int h, int f) : ImagePath("")
 {
-     m_format = f;
-     data = std::move(d); d=nullptr;
-     init(w, h);
+    GP_Print("image copied");
+    m_format = f;
+    init(w, h);
+    memcpy(data,d,w*h);
+}
+ Image::Image(pixel_uc *(&&d), int w, int h, int f) : ImagePath("")
+{
+    GP_Print("image movied");
+    m_format = f;
+    data = std::move(d); d=nullptr;
+    init(w, h);
 }
 
 //--------------------------------------------------------------------
