@@ -1,5 +1,6 @@
 #pragma once
 #include <typeinfo>
+#include "AppCore.h"
 
 #define REGISTER_EVENT(even_name)\
 struct even_name : EventType {\
@@ -62,8 +63,8 @@ struct OnPreviewWinInitialized : EventType {
 struct OnFontsLoading : EventType {
 	int count;
 	const char** paths;
-	bool isDrop;
-	OnFontsLoading(int count, const char** paths,int d=0) :count(count), paths(paths),isDrop(d){};
+	FontLoadSource fsource;
+	OnFontsLoading(int count, const char** paths,FontLoadSource fsource = FontLoadSource::None) :count(count), paths(paths),fsource(FontLoadSource::None){};
 };
 struct OnWindowResize : EventType {
 	int n_width;

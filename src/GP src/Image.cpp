@@ -352,14 +352,12 @@ Image& CaptureViewport()
  }
  Image::Image(const pixel_uc* d, int w, int h, int f) : ImagePath("")
 {
-    GP_Print("image copied");
     m_format = f;
     init(w, h);
-    memcpy(data,d,w*h);
+    memcpy(data, d, w * h * m_format * sizeof(pixel_uc));
 }
  Image::Image(pixel_uc *(&&d), int w, int h, int f) : ImagePath("")
 {
-    GP_Print("image movied");
     m_format = f;
     data = std::move(d); d=nullptr;
     init(w, h);

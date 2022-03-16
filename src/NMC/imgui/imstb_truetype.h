@@ -3358,7 +3358,7 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap* result, stbtt__edge* e,
                             z->ey = scan_y_top;
                         }
                     }
-                    STBTT_assert(z->ey >= scan_y_top); // if we get really unlucky a tiny bit of an edge can be out of bounds
+                    STBTT_assert(z->ey >= scan_y_top); //! if we get really unlucky a tiny bit of an edge can be out of bounds
                     // insert at front
                     z->next = active;
                     active = z;

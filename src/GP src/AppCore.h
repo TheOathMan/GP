@@ -113,6 +113,7 @@ enum class Glyph_Data_Access {// FontData.cpp && Main_Win.cpp
 	Bitmab_Read
 };
 
+enum class FontLoadSource{Drop,Open,None};
 
 struct Glyph_Vertices { // FontData.cpp & Main_Win.cpp & imstb_truetype.h
 	Vec2 origin;

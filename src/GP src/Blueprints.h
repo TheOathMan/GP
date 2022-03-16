@@ -39,8 +39,8 @@ static inline float  Dot(const Vec2& a, const Vec2& b) { return a.x * b.x + a.y 
 
 template<typename T> T distance(T x, T y, T x1, T y1) { return  (Vec<2,T>(x,y) - Vec<2, T>(x1, y1)).length(); };
 template<typename T> void Swap(T& a, T& b) { T tmp = a; a = b; b = tmp; }
-template<typename T> void moveItemToBack(T& v, size_t itemIndex) { itemIndex++; std::rotate(v.begin() + (itemIndex - 1), v.begin() + itemIndex, v.end()); }
-template<typename T> void moveItemToTop(T& v, size_t itemIndex) { moveItemToBack(v, itemIndex); itemIndex++; std::rotate(v.begin(), v.end() - 1, v.end());}
+template<typename T,typename i> void moveItemToBack(T& v, i& itemIndex) { std::rotate( itemIndex - 1, itemIndex, v.end()); }
+template<typename T,typename i> void moveItemToTop(T& v, i& itemIndex) { moveItemToBack(v, itemIndex); std::rotate(v.begin(), v.end() - 1, v.end());}
  
 
 

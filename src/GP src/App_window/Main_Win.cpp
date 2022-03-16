@@ -29,6 +29,7 @@
 #include "../Job.h"
 #include "../ReadDir.h"
 #include "../FileHandle.h"
+#include "../Input.h"
 #include "../../NMC/imgui/imgui.h"
 #include "../../NMC/GLFW/glfw3.h"
 #include "../../NMC/tinydialog/tinyfiledialogs.h"
@@ -44,7 +45,6 @@ std::string LogInfo(int line, const char* fileName);
 void SetGUICenter(ImVec2 size);
 
  //----------------------------------[SECTION]: STATIC GLOBAL DATA----------------------------------
-
 
 // windows size/pos variables
 struct Win_spec {
@@ -365,7 +365,7 @@ void FontsLoadingCallback(const EventType& e) {
     LoadingGUI = Loading_GUI();
     auto db_e = static_cast<const OnFontsLoading&>(e);
     int count = db_e.count;
-    int isDrop = db_e.isDrop;
+    FontLoadSource dc = db_e.fsource;
     //GP_Print("hello");
     if (!count)return;
     const char** paths = db_e.paths;
@@ -374,10 +374,11 @@ void FontsLoadingCallback(const EventType& e) {
     std::vector<std::string> g_spath; // hard copy needed for laoding thread
     for (size_t i = 0; i < count; i++) { 
         g_spath.push_back(paths[i]);
-        if(!isDrop){
-            OpenRecentP.push_back(paths[i]); //!############################# Might save a none font file
-            if(OpenRecentP.size() > 10) OpenRecentP.pop_front();}
-        else{       
+        if(dc == FontLoadSource::Open){
+            OpenRecentP.push_back(paths[i]); 
+            if(OpenRecentP.size() > 10) OpenRecentP.pop_front();
+        }
+        if(dc == FontLoadSource::Drop){
             DropRecentP.push_back(paths[i]); //!############################# Might save a none font file
             if(DropRecentP.size() > 10) DropRecentP.pop_front();
         } 
@@ -415,6 +416,7 @@ void WindowFocusCallback(const EventType& e) {
 }
 
 void GlyphPreviewRenderCallback(const EventType& e) {
+    gs.final_scale=200;
     sc = glyph_edit_mouse_control(); // reset
     ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); // default setting
 
@@ -1121,16 +1123,16 @@ void Main_Win::FontSelections() {
     ImGui::CollapsingHeader("Fonts", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_FramePadding);
     if (ImGui::BeginChild("child window"))
     {
-        static int selected = -1;
+        //static int selected = -1;
         for (uint id = 0; id < LoadList.loaded_fonts.size(); id++)
         {
             if (Selection_Gaurd() && LoadList.loaded_fonts.at(id)->gui_handle == Gui_Handle::Visible) { // - erorr
                 ImGui::PushID(id);
                 // get selecttion value
-                if (ImGui::Selectable(LoadList.loaded_fonts.at(id)->get_font_name().c_str(), selected == id)) {
+                if (ImGui::Selectable(LoadList.loaded_fonts.at(id)->get_font_name().c_str(), fs.SelectedFont == id)) {
                     //Selection_Gaurd();
                     fs.SelectedFont = id;
-                    selected = id;
+                    //selected = id;
                     fs.CurrentPage = 0;
                 }
 
@@ -1186,9 +1188,7 @@ void Main_Win::MenuBar() {
             }
             if (ImGui::MenuItem("Load Windows Fonts")) { 
                 ReadDir rd(std::string(getenv("SystemRoot")) + "\\Fonts");
-                //list_directory((std::string(getenv("SystemRoot")) + "\\Fonts\\").c_str()); //!########################
-                Event::Notify(OnFontsLoading(rd.GetFilePath().size(), rd.GetFilePath().data() ));
-                
+                Event::Notify(OnFontsLoading(rd.GetFilePath().size(), rd.GetFilePath().data()));
             }
             ImGui::EndMenu();
         }
@@ -1199,25 +1199,96 @@ void Main_Win::MenuBar() {
 
 Main_Win::Main_Win(const char* window_name, int width, int height) : App_Window(window_name, width, height)
 {
-   // float dis = distance(Vec2(-1, 1), Vec2(-1, -2));
-    //ImRect rec1(0, 0, 5, 5);
-    //auto g = rec1.Overlaps(ImRect(4, 4, 10, 10));
-
     GPWins.cws.x = width;
     GPWins.cws.y = height;
 }
 
 Main_Win::~Main_Win()
 {
-    // Cleanup
     gui_spc->GUI_OnDestruction();
+}
+
+//?---------------------------------------------------
+//?---------------------------------------------------
+//?---------------------------------------------------
+
+// enum class InputState: short {Pressed=1,Released=0,Hold=2,NONE};
+// struct InputData{
+//     int key; InputState action; 
+//     bool operator == (InputData other){ if(key == other.key)return true; return false;}
+//     void print() {
+//             const char* str;
+//             switch (action)
+//             {
+//                 case (InputState::Pressed): str = "Preseed"; break;
+//                 case (InputState::Released): str = "Released"; break;
+//                 case (InputState::Hold):  str = "Hold"; break;
+//                 case (InputState::NONE):  str = "None"; break;
+//             }
+//             GP_Print("Key: " << key << " action: " << str);
+//         }
+//     void Swap(InputData& other) {std::swap(action,other.action);std::swap(key,other.key); }
+// };
+// struct Input{
+//     static std::vector<InputData> input_pool; //recent input sorted on top
+//     Input(InputData ip){ 
+//         auto input = std::find(input_pool.begin(),input_pool.end(),ip);
+//         if(input == input_pool.end() ){
+//             input_pool.push_back(ip);
+//         }
+//         else{
+//             (*input).action = ip.action;
+//             // reset all released input on a new pressed entry
+//             if((*input).action == InputState::Pressed) for(auto&& i: input_pool){ if(i.action == InputState::Released) {i.action = InputState::NONE;} }
+//             //updated input pushed on top.
+//             for(auto itr = input_pool.begin();(*input).key != (*itr).key;itr++) (*input).Swap(*itr);
+//         }
+//     } 
+
+//     static bool is_released(int key);
+//     static bool is_pressed(int key);
+//     static bool is_pressing(int key);
+// };
+// std::vector<InputData> Input::input_pool;
+// bool Input::is_released(int key){
+//     auto input = std::find_if(input_pool.begin(),input_pool.end(),[=](InputData a){return a.key == key;});
+//     if(input != input_pool.end()  && (*input).action == InputState::Released){
+//         (*input).action = InputState::NONE;
+//         return true;
+//     }
+//     return false;
+// }
+// bool Input::is_pressed(int key){
+//     auto input = std::find_if(input_pool.begin(),input_pool.end(),[=](InputData a){return a.key == key;});
+//     if(input != input_pool.end()  && (*input).action == InputState::Pressed){
+//         (*input).action = InputState::NONE;
+//         return true;
+//     }
+//     return false;
+// }
+// bool Input::is_pressing(int key){
+//     auto input = std::find_if(input_pool.begin(),input_pool.end(),[=](InputData a){return a.key == key;});
+//     if(input != input_pool.end()  && ((*input).action == InputState::Pressed || (*input).action == InputState::Hold)){
+//         return true;
+//     }
+//     return false;
+// }
+
+//?---------------------------------------------------
+//?---------------------------------------------------
+//?---------------------------------------------------
+
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{    
+    Input( {key,(InputState)action});       
 }
 
 void Main_Win::OnWindowAwake()
 {
+    glfwSetKeyCallback(window,key_callback);
     App_Window::OnWindowAwake();
     SetBackgroundColor(15, 15, 15);
-    glfwSetWindowMaximizeCallback(window, [](GLFWwindow*,int i) { GP_Print(i); }  );
 
     ///---------------- Register Window Events ---------------------------
     Event::Connect<OnFontsLoading>(FontsLoadingCallback);
@@ -1243,7 +1314,6 @@ void Main_Win::OnWindowAwake()
 
 void Main_Win::OnUpdate()
 {
-    //GP_Print(LoadList.loading_job.m_used);
 	App_Window::OnUpdate();
     ImGuiMouseCursor current = ImGui::GetMouseCursor();
     gui_spc->GUI_OnFrameStart();
@@ -1304,10 +1374,14 @@ void Main_Win::OnUpdate()
 
 }
 
-
 void Main_Win::OnInput()
 {
-
+    if(Input::is_pressed(GLFW_KEY_DOWN)){
+        fs.SelectedFont++;
+    }
+    if(Input::is_pressed(GLFW_KEY_UP)){
+        fs.SelectedFont--;
+    }
 }
 
 
