@@ -23,6 +23,7 @@ public:
 
 	inline int get_width()				  const { return width;}
 	inline int get_height()				  const { return height;}
+	inline Vec2i get_screenSize()		  const { return ScreenSize;}
 	inline GLFWwindow* get_window()		  const { return window;}
 	inline const char* get_window_name()  const { return windowName;}
 	inline bool IsWindowOpen()					{ return !glfwWindowShouldClose(window); }
@@ -32,6 +33,7 @@ private:
 	void RawQuadTexture();
 	color_t background_col;
 	int width, height;
+	Vec2i ScreenSize;
 	const char* windowName;
 protected:
 	GLFWwindow* window = nullptr;

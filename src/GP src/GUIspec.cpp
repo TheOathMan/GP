@@ -117,8 +117,20 @@ namespace GpGUI {
     }
 
     void SPINE(float x, float y, float bx, float by) {
-        ImGui::ItemSize(ImVec2(bx, by)); ImGui::Separator(); ImGui::ItemSize(ImVec2(x, y));
+        ImGui::Separator(); ImGui::ItemSize(ImVec2(x, y));
     }
+
+    void RightAlignText(ImVec2 pos,const char* text, ...) {
+        va_list args;
+        va_start(args, text);
+        char buff[52];
+        vsprintf_s(buff,"%i/%i" ,args);
+        ImVec2 tsz = ImGui::CalcTextSize(buff,buff + strlen(buff));
+        ImGui::SetCursorPos(ImVec2(pos.x - tsz.x,pos.y));
+        ImGui::TextUnformatted(buff);
+        va_end(args);
+    }
+
 }
 
 
@@ -214,17 +226,9 @@ void GUIspec::GUI_OnDestruction()
 std::deque<std::string> OpenRecentP;
 std::deque<std::string> DropRecentP;
 
-void ShowMenuFile()
-{
-    if (ImGui::MenuItem("Clean")) { 
-        Event::Notify(OnAllFontsClear());
-
-    }
-    if (ImGui::MenuItem("Open", "Ctrl+O")) {
+void OpenFontDialog(){
         char const* lFilterPatterns[2] = { "*.ttf", "*.otf" };
         const char* selection = tinyfd_openFileDialog("Select Font File", "C:\\", 2, lFilterPatterns, NULL, true);
-
-
         if (!selection) return;
         size_t f_sz = strlen(selection) + 1;
         char* tempstr = (char*)malloc(f_sz);
@@ -243,6 +247,15 @@ void ShowMenuFile()
         }
         Event::Notify(OnFontsLoading(count, paths.data() ));
         free(tempstr);
+}
+
+void ShowMenuFile()
+{
+    if (ImGui::MenuItem("Clean", "Ctrl+D")) { 
+        Event::Notify(OnAllFontsClear());
+    }
+    if (ImGui::MenuItem("Open", "Ctrl+O")) {
+        OpenFontDialog();
     }
     if (ImGui::BeginMenu("Open Recent")) 
     {

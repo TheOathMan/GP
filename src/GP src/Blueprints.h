@@ -30,7 +30,8 @@ template<typename T> T Clamp(T val, T min, T max) { return (val < min) ? min : (
 template<typename T> T Clamp01(T val) { return (val < 0) ? 0 : (val > 1) ? 1 : val; }
 template<typename T> T Lerp(T a, T b, float t) { return static_cast<T> (a + (b - a) * t); }
 template<typename T> T InverseLerp(T a, T b, T value) {if (a != b) return (value - a) / (b - a); else return 0.0f; }
-template<typename T> T PercentageOfWhole(T whole, T ofPer) {T rv = whole / 100.0f;T rs = rv * ofPer; return rs;}
+template<typename T> T PerceToVal(T value, T percentage) {T rv = value / 100.0f;T rs = rv * percentage; return rs;} // Get the value of naumber based on a provided percentage
+template<typename T> T FracToPerce(T value, T fraction) {T rv = 100.0f / value;T rs = rv * fraction; return rs;}    // Get the percentage of naumber based on a provided fraction
 template<typename T> T Repeat(T t, T length) { return Clamp(t - std::floor(t / length) * length, 0.0f, length); }
 static inline float  Dot(const Vec2& a, const Vec2& b) { return a.x * b.x + a.y * b.y; }
 

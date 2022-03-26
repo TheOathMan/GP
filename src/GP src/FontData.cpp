@@ -124,12 +124,14 @@ Glyph_data FontData::GetGlyphPreData(int glyph_index, float scale, Image_Type ty
     return dt;
 }
 
+size_t FontData::LastSizePushed = 1;
 
 void FontData::init()
 {
 
     FileHandle font_file(font_path.c_str(), FileBinAccess::READ);
     m_fsize = font_file.file_size;
+    LastSizePushed =m_fsize; 
     if (font_file.file_data) {
         font_binery_data = (uint8_t*)font_file.file_data;
         gui_handle = Gui_Handle::Visible;

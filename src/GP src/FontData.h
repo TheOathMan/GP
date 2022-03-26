@@ -17,6 +17,7 @@ struct Ranged_Font_Bitmap_data { // FontData.cpp
 class FontData {
 public:
     Gui_Handle gui_handle;
+    static size_t LastSizePushed;
 
     FontData(const std::string& font_path);
     FontData(const std::string& font_path, const std::string& font_name);

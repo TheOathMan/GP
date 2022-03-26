@@ -25,6 +25,7 @@ public:
 private:
 	GLFWwindow* window;
 };
+void OpenFontDialog();
 void ShowMenuFile();
 void ShowStyleEditor(ImGuiStyle* ref = NULL);
 namespace GpGUI {
@@ -33,6 +34,7 @@ namespace GpGUI {
 	bool CheckBox(const char* name, bool* val);
 	bool LinkedCheckBox(const char* name, int* v, int val);
 	void SPINE(float x = 0, float y = 0, float x1 = 0, float y1 = 0);
+	void RightAlignText(ImVec2 pos,const char* text, ...);
 }
 
 extern std::deque<std::string> OpenRecentP;

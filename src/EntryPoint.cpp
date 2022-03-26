@@ -1,6 +1,7 @@
 #include "GP src/Blueprints.h"
 #include "GP src/App_window/Main_Win.h"
 #include "GP src/Event.h"
+#include "GP src/Input.h"
 //#pragma comment(lib, "glfw3")
 
 void* operator new (std::size_t sz) {
@@ -35,8 +36,8 @@ int main(int, char**)
     if (!glfwInit())
         return 1;
 
-    Main_Win* MainWindow = new Main_Win("font Printer", 1300, 700);
-    App_Window* ImagePreviewWin = new App_Window("glyph preview", 500, 500, MainWindow->get_window());
+    Main_Win* MainWindow = new Main_Win("Glyph Printer", 1300, 700);
+    App_Window* ImagePreviewWin = new App_Window("Glyph Preview", 500, 500, MainWindow->get_window());
     glfwHideWindow(ImagePreviewWin->get_window());
 
     App_Window::wins32.push_back(MainWindow);
@@ -49,25 +50,24 @@ int main(int, char**)
 
     while (MainWindow->IsWindowOpen())
     {
-        // windows update
+        //windows update
         for (auto& WINS : App_Window::wins32) {
             WINS->OnUpdate();
             glfwSwapBuffers(WINS->get_window());
         }
 
-        // windows input
-        for (auto& WINS : App_Window::wins32) {
-            WINS->OnInput();
-        }
+        //windows input
+        if(Input::is_new_input())
+            for (auto& WINS : App_Window::wins32) {
+                WINS->OnInput();
+            }
 
         if (!ImagePreviewWin->IsWindowOpen()) {
             glfwHideWindow(ImagePreviewWin->get_window());
-            
         }
         
-        // wake up sec win
+        //wake up sec win
         Event::Notify_Once(OnPreviewWinInitialized(ImagePreviewWin));
-
         glfwPollEvents();
     }
 

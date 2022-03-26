@@ -2,6 +2,7 @@
 #include "../AppCore.h"
 #include "../Blueprints.h"
 #include "../Image.h"
+#include "../Input.h"
 
 static bool is_Focused = true;
 
@@ -26,6 +27,11 @@ static void scrolling_callback(GLFWwindow* w, double h, double v)
     Event::Notify(OnScrolling(h,v));
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{    
+    Input( {key, static_cast<InputState>(action) });    
+}
+
 App_Window::App_Window(const char* window_name, int width, int height, GLFWwindow* srd_window):
     windowName(window_name),
 	width(width),
@@ -40,6 +46,8 @@ App_Window::App_Window(const char* window_name, int width, int height, GLFWwindo
         ASSERT("There is no window or your GPU isn't working properly", true);
 
     glfwMakeContextCurrent(window);
+    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    ScreenSize.x = mode->width, ScreenSize.y = mode->height;
 }
 
 App_Window:: ~App_Window() 
@@ -55,6 +63,7 @@ void App_Window::OnWindowAwake()
     glfwSetWindowFocusCallback(window, window_Focus_callback); //typedef void (* GLFWwindowfocusfun)(GLFWwindow*,int);
     glfwSetWindowSizeCallback(window, window_resize_callback);
     glfwSetScrollCallback(window, scrolling_callback);
+    glfwSetKeyCallback(window,key_callback);
     //glfwSetWindowSizeCallback(window, [](GLFWwindow*, int s) {GP_Print("maximize fun: " << s); });
 }
 

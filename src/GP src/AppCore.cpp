@@ -3,7 +3,6 @@
 #include <stdarg.h>
 #include <iostream>
 
-
 void LogTrace(int line, const char* fileName, const char* msg, ...) {
     va_list args;
     char fullLog[256] = { 0 };
@@ -35,7 +34,4 @@ int gcd(int a, int b)
     return gcd(b % a, a);
 }
 
-
 float distance(Vec2 v1, Vec2 v2) { return  (v1 - v2).length(); };
-//float distance(Vec2 v1, Vec2 v2) { return  (v1 - v2).length(); }
-
