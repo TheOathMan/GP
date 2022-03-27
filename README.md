@@ -1,66 +1,28 @@
-# BinPack
-BinPack is a command line tool for C and C++ to statically pack binary data into a header file, a library file or to output the binary content of a file to the console.
+# Glyph Printer
+Glyph Printer is a c++ project that renders and save each glyph as an image in any provided font file. You can save glyphs at any scale or edit it's existing vertices prior to that. What you can not do with this app is output a font file after vertices have been edited. If you wish to design Logos or expose glyphs in a certain font file, this app is for you.
 
-# Usage:
-List files that need to be packed as data array in a single header file or as a static libray. Use minus sign (-) to list options, and equal sign (=) for edit options. Available options are:
-
-### Write Options:
-
-* `-hr` To pack all the data of provided files into a header file (.h). [default]
-
-* `-l64` To pack all the data of provided files into a 64 bit static library.
-
-* `-l32` To pack all the data of provided files into a 32 bit static library.
-
-* `-p` Output data to the console.
-
-* `-pn` Output data to the console natively. (strip c++ integer-suffix and comma)
-
-* `-pc` Output data to the console as Ascll characters.
-
-
-### Mode Options:
-
-* `-hx` Convert data to hexadecimal literals.
-
-* `-bn` Convert data to binary literals.
-
-* `-j` To align the data or justify all lines.
-
-* `-c` To compress the data. (see source code for more details on how to decompress it
-
-### Edit Options:
-
-* `=out` write the output to a folder. Example: =out C:\Users\Desktop
-
-* `=jl` Edit the justify level end line level. Example: =jl 2
-
-* `=cmf` compress a file.
-
-* `=ucf` decompress a file.
-
-
-# Examples:
-
-### Example 1:
-```
-text.txt -j -hx -p
-```
-
-This command will output the data of 'text.txt' into the console(-p) in the form of hexadecimal(-hx),
-and justify(-j) will be applied to the output.
-
-### Example 2:
-```
-text.txt data.bin -l64
-```
-
-This command will pack the binary data of 'text.txt' and 'data.bin' into a static library file (.lib/.a) which then will be outputted along with a header file that contain pointers to each data within that precompiled binary pachage.
+# Release:
+Version 1.0 available for download [here](https://github.com/TheOathMan/GP/releases)
 
 # License
-[Unlicense](https://unlicense.org/) public domian. 
-I dedicate any and all copyright interest in this software to the
-public domain. I make this dedication for the benefit of the public at
-large and to the detriment of my heirs and successors. I intend this
-dedication to be an overt act of relinquishment in perpetuity of all
-present and future rights to this software under copyright law.
+[MIT](https://opensource.org/licenses/MIT)
+
+Copyright (c) 2022 Othman Alzahrani
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
