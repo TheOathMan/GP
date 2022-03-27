@@ -86,8 +86,9 @@ public:
 	Image();
     // load from path
 	Image(const char* path, bool flip = false);
-	Image(const pixel_uc* data, int width,int hight,int format);
-	Image(pixel_uc *(&&data), int width,int hight,int format);
+	Image(const pixel_uc* Rawdata, int width,int hight,int format);
+	Image(pixel_uc *(&&Rawdata), int width,int hight,int format);
+	Image(pixel_uc *ImageData,int len,int desired_format);
     Image(int w, int h, int f, bool setTo0 = false) : Raw_Image<pixel_uc>(w, h, f, setTo0) {};
 
     // copy operations
@@ -110,7 +111,7 @@ public:
     void AlphaToCheckerboard();
 
     // multiply colors with black and white
-    void overrideColors(color_t& on_black, color_t& on_white);
+    void overrideColors(const  color_t& on_black,const color_t& on_white);
     void SetColores(color_t colors);
     void ColReset();
     void Clean();
@@ -129,3 +130,8 @@ Image& CaptureViewport();
 // upload texture to the gpu.
 uint LoadImageToGPU(Image& image);
 color_t config_Color(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha);
+#define COLOR_WHITE config_Color(255,255,255,255)
+#define COLOR_BLACK config_Color(0,0,0,255)
+#define COLOR_RED   config_Color(255,0,0,255)
+#define COLOR_GREEN config_Color(0,255,0,255)
+#define COLOR_BLUE  config_Color(0,0,255,255)

@@ -35,6 +35,10 @@
 #include "../../NMC/GLFW/glfw3.h"
 #include "../../NMC/tinydialog/tinyfiledialogs.h"
 #include "../../NMC/imgui/imgui_internal.h"
+
+#include <Windows.h>
+
+
 std::string LogInfo(int line, const char* fileName);
 
 
@@ -252,6 +256,32 @@ struct GUI_WINDOW {
 
  //---------------------------------- [SECTION]: FUNCTIONS ----------------------------------
 
+//-----------callbacks
+static void drop_callback(GLFWwindow* window, int count, const char** paths)                
+{
+    Event::Notify(OnFontsLoading(count, paths,FontLoadSource::Drop));
+}
+
+static void window_resize_callback(GLFWwindow* window, int n_width, int n_height) 
+{
+    Event::Notify(OnWindowResize(n_width, n_height));
+}
+
+static void window_Focus_callback(GLFWwindow* window, int isFocused) 
+{
+    Event::Notify(OnWindowFocus(isFocused));
+}
+static void scrolling_callback(GLFWwindow* w, double h, double v) 
+{
+    Event::Notify(OnScrolling(h,v));
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{    
+    Input( {key, static_cast<InputState>(action) });    
+}
+//---------------------------------------
+
 void SetGUIWinToCenter(ImVec2 size){
     ImVec2 win_size = ImGui::GetWindowSize();
     ImGui::SetNextWindowSize(size, ImGuiCond_Appearing);
@@ -463,7 +493,7 @@ void GlyphPreviewRenderCallback(const EventType& e) {
     sc = glyph_edit_mouse_control(); // reset
     ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); // default setting
 
-    //New checkerboard image bg
+    //New checkerboard image backgrownd on demand
     if (Selection_Gaurd()) {
         gs.checker = std::move(Image(1920, fs.SelectedImage->Get_Height() + 40, 4, true));
         gs.checker.AlphaToCheckerboard();
@@ -496,8 +526,6 @@ void PreviewWinInitilizedCallback(const EventType& e) {
     auto w = s_win->get_window();
     Image* img = nullptr;
     ImageProcess(img, gs.final_scale, (Image_Type)fs.glyph_setting, false, gs.gl_color, gs.BG_color);
-    color_t col = config_Color(255,0,0,0);
-    color_t col2 = config_Color(0,255,0,0);
     img->AlphaToCheckerboard();
 
     //update window size, view port size, close flag, visibility.
@@ -505,6 +533,11 @@ void PreviewWinInitilizedCallback(const EventType& e) {
     glViewport(0, 0, img->Get_Width(), img->Get_Height());
     glfwSetWindowShouldClose(w, 0);
     glfwShowWindow(w);
+    GLFWimage im[1];
+    im[0].pixels = fs.SelectedImage->Get_Data();
+    im[0].height = fs.SelectedImage->Get_Height();
+    im[0].width = fs.SelectedImage->Get_Width();
+    glfwSetWindowIcon(w,1,im);
 
     //move preview window to the middle.
     glfwSetWindowPos(w, (s_win->get_screenSize().x / 2) - (img->Get_Width() / 2), (s_win->get_screenSize().y / 2) - (img->Get_Height() / 2));
@@ -1246,15 +1279,23 @@ Main_Win::Main_Win(const char* window_name, int width, int height) : App_Window(
     GPWins.cws.y = height;
 }
 
+
 Main_Win::~Main_Win()
 {
     gui_spc->GUI_OnDestruction();
 }
-
 void Main_Win::OnWindowAwake()
 {
+#if defined Release
+    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+#endif
     App_Window::OnWindowAwake();
-    SetBackgroundColor(15, 15, 15);
+
+    glfwSetDropCallback(window, drop_callback);
+    glfwSetWindowFocusCallback(window, window_Focus_callback); //typedef void (* GLFWwindowfocusfun)(GLFWwindow*,int);
+    glfwSetWindowSizeCallback(window, window_resize_callback);
+    glfwSetScrollCallback(window, scrolling_callback);
+    glfwSetKeyCallback(window,key_callback);
 
     ///---------------- Register Window Events ---------------------------
     Event::Connect<OnFontsLoading>(FontsLoadingCallback);
@@ -1269,6 +1310,7 @@ void Main_Win::OnWindowAwake()
     Event::Connect<OnGlyphPageEntered>(GlyphPageEnterCallback);
     Event::Connect<OnDeleteFontData>(DeletFontDataCallback);
 
+    SetBackgroundColor(15, 15, 15);
     gui_spc = new GUIspec(window);
     GPWins.window_flags = gui_spc->window_flags;
 

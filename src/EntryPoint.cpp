@@ -2,32 +2,20 @@
 #include "GP src/App_window/Main_Win.h"
 #include "GP src/Event.h"
 #include "GP src/Input.h"
-//#pragma comment(lib, "glfw3")
 
-void* operator new (std::size_t sz) {
-    //Debug("Allocationg: " << sz);
-    // avoid std::malloc(0) which may return nullptr on success
-    if (sz == 0)
-        ++sz;
+// void* operator new (std::size_t sz) {
+//     if (sz == 0)
+//         ++sz;
 
-    if (void* ptr = std::malloc(sz))
-        return ptr;
+//     if (void* ptr = std::malloc(sz))
+//         return ptr;
 
-    throw std::bad_alloc{};
-    // normally throw bad alloc
-}
-auto a =0x15B98;
-
-//void* operator new(size_t size)
-//{
-//    void* ptr;
-//    ptr = malloc(size);
-//    return ptr;
-//}
-
-void operator delete(void* ptr) noexcept {
-    std::free(ptr);
-}
+//     throw std::bad_alloc{};
+//     // normally throw bad alloc
+// }
+// void operator delete(void* ptr) noexcept {
+//     std::free(ptr);
+// }
 
 
 int main(int, char**)
@@ -46,7 +34,10 @@ int main(int, char**)
 
     // windows start
     //for (auto& WINS : App_Window::wins32)
-    MainWindow->OnWindowAwake();
+   // MainWindow->OnWindowAwake();
+    for (auto& WINS : App_Window::wins32) {
+        WINS->OnWindowAwake();
+    }
 
     while (MainWindow->IsWindowOpen())
     {

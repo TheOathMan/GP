@@ -3,34 +3,10 @@
 #include "../Blueprints.h"
 #include "../Image.h"
 #include "../Input.h"
+#include "../../Resources/res.h"
 
-static bool is_Focused = true;
 
 std::vector<App_Window*> App_Window::wins32;
-
-static void drop_callback(GLFWwindow* window, int count, const char** paths)
-{
-    Event::Notify(OnFontsLoading(count, paths,FontLoadSource::Drop));
-}
-
-static void window_resize_callback(GLFWwindow* window, int n_width, int n_height) 
-{
-    Event::Notify(OnWindowResize(n_width, n_height));
-}
-
-static void window_Focus_callback(GLFWwindow* window, int isFocused) 
-{
-    Event::Notify(OnWindowFocus(isFocused));
-}
-static void scrolling_callback(GLFWwindow* w, double h, double v) 
-{
-    Event::Notify(OnScrolling(h,v));
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{    
-    Input( {key, static_cast<InputState>(action) });    
-}
 
 App_Window::App_Window(const char* window_name, int width, int height, GLFWwindow* srd_window):
     windowName(window_name),
@@ -59,12 +35,14 @@ App_Window:: ~App_Window()
 
 void App_Window::OnWindowAwake()
 {
-    glfwSetDropCallback(window, drop_callback);
-    glfwSetWindowFocusCallback(window, window_Focus_callback); //typedef void (* GLFWwindowfocusfun)(GLFWwindow*,int);
-    glfwSetWindowSizeCallback(window, window_resize_callback);
-    glfwSetScrollCallback(window, scrolling_callback);
-    glfwSetKeyCallback(window,key_callback);
-    //glfwSetWindowSizeCallback(window, [](GLFWwindow*, int s) {GP_Print("maximize fun: " << s); });
+    // Window Icon
+    Image GetIcon((pixel_uc*)_icon_data,icon_size,4);
+    GetIcon.overrideColors(COLOR_WHITE,COLOR_RED);
+    GLFWimage icons[1];
+    icons[0].pixels = GetIcon.Get_Data();
+    icons[0].width  = GetIcon.Get_Width();
+    icons[0].height = GetIcon.Get_Height();
+    glfwSetWindowIcon(window, 1, icons);
 }
 
 

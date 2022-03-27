@@ -202,19 +202,21 @@ void Image::ColReset(){
 //      PIXEL_ACCESS_END;
 
 //  }
- void Image::overrideColors(color_t& on_black, color_t& on_white)
+ void Image::overrideColors(const color_t& on_black,const  color_t& on_white)
  {
     To_RBGA();// make sure we are deeling with three channels
     PIXEL_ACCESS_BEGIN(width, height, m_format, PixelMapPointes);
     SET_DEFAULT;
+    color_t b = on_black;
+    color_t w = on_white;
 
     Vec3 p , p1 = To01_fVec3(PIXEL[RED], PIXEL[GREEN], PIXEL[BLUE]);
     p.r = 1 - p1.r;
     p.g = 1 - p1.g;
     p.b = 1 - p1.b;
 
-    Vec3 out =  To01_fVec3(Get_Red(on_black), Get_Green(on_black), Get_Blue(on_black));
-    Vec3 out2 = To01_fVec3(Get_Red(on_white), Get_Green(on_white), Get_Blue(on_white));
+    Vec3 out =  To01_fVec3(Get_Red(b), Get_Green(b), Get_Blue(b));
+    Vec3 out2 = To01_fVec3(Get_Red(w), Get_Green(w), Get_Blue(w));
 
     p.r = (p.r * out.r);
     p.g = (p.g * out.g);
@@ -361,6 +363,15 @@ Image& CaptureViewport()
     m_format = f;
     data = std::move(d); d=nullptr;
     init(w, h);
+}
+
+ Image::Image(pixel_uc *imd,int len, int f) : ImagePath("")
+{
+    //STBIDEF stbi_uc* stbi_load_from_memory(stbi_uc           const* buffer, int len, int* x, int* y, int* channels_in_file, int desired_channels);
+    int channelInImageData=0;
+    data = stbi_load_from_memory(imd,len,&width,&height,&channelInImageData,f);
+    m_format = f;
+    init(width, height);
 }
 
 //--------------------------------------------------------------------
