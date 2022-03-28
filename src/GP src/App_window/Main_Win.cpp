@@ -38,7 +38,6 @@
 
 #include <Windows.h>
 
-
 std::string LogInfo(int line, const char* fileName);
 
 
@@ -340,18 +339,15 @@ int LoadFont_Path(const char* path) {
 }
 
 void FontLoadingJob(std::vector<std::string>&& fonst_paths, const int count) {
-    //std::this_thread::sleep_for(std::chrono::microseconds(500)); //!================================ // give time for delta time count to adjest
     LoadProg.Sample();
     if (fonst_paths.size() && count) {
         LoadList.NewLoad();
         LoadList.Total_Font_Load = count;
         for (int i = 0; i < count; i++) {
-            //GP_Print(fonst_paths[i].c_str());
-            //std::this_thread::sleep_for(std::chrono::seconds(3)); //!================================
             LoadFont_Path(fonst_paths[i].c_str());
             LoadProg.Sum = 0;
         }
-        LoadList.Previous_loads_size = LoadList.loaded_fonts.size(); //!-------------------- At end of loading, store the size
+        LoadList.Previous_loads_size = LoadList.loaded_fonts.size();
     }
 }
 
@@ -368,7 +364,7 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
         }
 
         if (imgeType == Image_Type::Background) {
-            ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale, gs.SDF_edgeOffset);
+            ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale, gs.SDF_edgeOffset); //!===========================
             glyphTex = new Image(std::move(ft.pixels), ft.width, ft.height, 1);
             // turn it to 4 channles when we want to send it to the GPU only.
             // other than that, make it 4 channles only when we adjust colors at SetColor2(col2, col)
@@ -381,7 +377,6 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
             if(GPU_Update) glyphTex->To_RBGA();
         }
         
-
         if (imgeType != Image_Type::SDF && bgColor && gl_color) {
             color_t col = config_Color(bgColor[0] * 255, bgColor[1] * 255, bgColor[2] * 255, 255);
             color_t col2 = config_Color(gl_color[0] * 255, gl_color[1] * 255, gl_color[2] * 255, 255);
@@ -621,7 +616,7 @@ void Main_Win::MainCanvesGUIWin() {
                 int selPos = fs.CurrentPage == 0 ? fs.SelectedGlyph : fs.SelectedGlyph - (fs.CurrentPage* CELLS_NUMBER);
                 ImU32 cel_col = selPos == id ? IM_COL32(255, 255, 255, 200) : IM_COL32(255, 255, 255, 80);
                 if (Selection_Gaurd())
-                    if (CurGlyphPos >= Current_Font->get_glyph_listCC().size()) //!FIXME: Possible thread related error
+                    if (CurGlyphPos >= Current_Font->get_glyph_listCC().size())
                         cel_col = IM_COL32(255, 255, 255, 30);
 
                 // Organizing cells horizontally
@@ -943,8 +938,10 @@ void Main_Win::GlyphProcessPages() {
                 if (GpGUI::LinkedCheckBox("SDF", &fs.glyph_setting, (int)Image_Type::SDF)) { ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); };
 
                 // Edge Spacing ---------------------------
-                if (fs.glyph_setting == 0 && ImGui::SliderInt("Edge Spacing", &gs.SDF_edgeOffset, 1, 100, "%i"))
-                    ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); ;
+                if (fs.glyph_setting == 0 && ImGui::SliderInt("Edge Spacing", &gs.SDF_edgeOffset, 1, 100, "%i")){
+                        ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color);
+                        Event::Notify(OnGlyphPreviewRender());
+                    }
 
                 // Color picker-----------------------------
                 if (fs.glyph_setting < 2 && ImGui::ColorEdit3("GL color ", gs.BG_color, ImGuiColorEditFlags_PickerHueWheel)) 
@@ -1359,8 +1356,8 @@ void Main_Win::OnUpdate()
                                         "Open font file browser",
                                         "Delete all loaded fonts",
                                         "Delete a selected font",
-                                        "Move font selection up",
-                                        "Move font selection down"};
+                                        "Move font selection down",
+                                        "Move font selection up"};
                 int size = IM_ARRAYSIZE(s_key);
 
                 ImGui::Columns(2, "mycolumns"); // 4-ways, with border
