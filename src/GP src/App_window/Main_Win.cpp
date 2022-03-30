@@ -6,13 +6,6 @@
 [GUI WIN CONTENT]
 [MAIN WIN CLASS IMPL]
 */ 
-//TODO -----------------------
-// when window dl crampped up, it crashes.
-// files that have a none font extention, crashes.
-// loading more than once causes lag in loading bare (un accourate).
-// arrows goes byond boands.
-// shortcut help place.
-// font path that have space, not being loaded //! not often, happned one time
 
 #include "../defines.h"
 
@@ -74,7 +67,7 @@ struct font_loading {
     std::vector<std::string> TargetFontsNames; // last font file names that was attmpted to load
     void NewLoad(){TargetFontsNames.clear(); Successful_laods=0; Failed_Loads=0;   }
 
-    std::vector<std::shared_ptr<FontData>> loaded_fonts;
+    std::vector<std::shared_ptr<FontData>> loaded_fonts; //! might need a mutex
     std::vector<std::shared_ptr<Image>> loaded_bitmaps; //list of glyphs bitmaps for preview 
 #if defined ASYNC_METHOD_THREADING || defined LOCALTHREAD_METHOD_THREADING
     Job<void> loading_job;
@@ -84,7 +77,6 @@ struct { bool is_working(){return false;}} loading_job ;
     int Total_Font_Load=0;
     bool open_log =false;
     int SubWinsflags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings ;
-   // bool thread_working = false;
 } LoadList;
 
 static bool OpenUsagewindow = false; 
@@ -153,8 +145,6 @@ struct LoadBarProg{
         next_load_size +=1.0f;
         Sum = weight/ (total_load_count*next_load_size*process_speed)  + Sum;
         float res = Lerp(from,to,Sum);
-       // GP_Print(weight/ (total_load_count*next_load_size));
-
         return ImMin(res,to);
     }
 }LoadProg;
@@ -169,9 +159,7 @@ struct Loading_GUI {
             SetGUIWinToCenter(ImVec2(500,300));
             ImGui::Begin(log_name, open, LoadList.SubWinsflags, (int)Window_Resize_Dir::WRD_NONE);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
             ImVec2 this_GwinSize = ImGui::GetWindowSize();
-
             ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,LoadList.SubWinsflags);
             {
                 for (size_t i = 0; i < log_lists.size(); i++)
@@ -202,7 +190,7 @@ struct Loading_GUI {
         }
         
         // open loading window once the loading thread has started 
-        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) //!-----===========================================================
+        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) 
         {
             ImGui::TextUnformatted(loading_text);
             ImGui::Separator();
@@ -288,7 +276,6 @@ void SetGUIWinToCenter(ImVec2 size){
 }
 
 bool Selection_Gaurd() {
-    //if (!LoadList.loading_job.is_working() && !LoadList.loaded_fonts.empty()) { //! testing selection gaurd without is_working
     if (!LoadList.loaded_fonts.empty()) {
         fs.SelectedFont = fs.SelectedFont < 0 ? LoadList.loaded_fonts.size()-1 : fs.SelectedFont >= LoadList.loaded_fonts.size() ? 0 : fs.SelectedFont;
         fs.SelectedGlyph = fs.SelectedGlyph < 0 ? Current_Font->get_glyph_listCC().size()-1 : fs.SelectedGlyph >= Current_Font->get_glyph_listCC().size() ? 0 : fs.SelectedGlyph;      
@@ -364,7 +351,7 @@ void ImageProcess(Image* (&glyphTex), float scale, const Image_Type imgeType,boo
         }
 
         if (imgeType == Image_Type::Background) {
-            ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale, gs.SDF_edgeOffset); //!===========================
+            ft = Current_Font->GetGlyphBitmap_V(fs.SelectedGlyph, scale, gs.SDF_edgeOffset); 
             glyphTex = new Image(std::move(ft.pixels), ft.width, ft.height, 1);
             // turn it to 4 channles when we want to send it to the GPU only.
             // other than that, make it 4 channles only when we adjust colors at SetColor2(col2, col)
@@ -597,7 +584,6 @@ void Main_Win::MainCanvesGUIWin() {
 
         ImGui::Spacing(); ImGui::Separator();
         ImVec2 ofst_dat = ImGui::GetCursorScreenPos();
-        //GP_Print(ImGui::GetMousePos().x);
 
         // organizing glyph textures, glyph boxes and align it accordingly-------------------------------
         ImGui::BeginChild("child window");
@@ -916,7 +902,7 @@ void Main_Win::GlyphProcessPages() {
         {
             if (entred.EditPage) { entred.EditPage = false; Event::Notify(OnEditPageEntered());}
             BIG_TEXT("Edit Glyph Image: "); GpGUI::SPINE();
-            ImVec2 ChickerBoardPos = ImGui::GetCursorScreenPos(); //!-------
+            ImVec2 ChickerBoardPos = ImGui::GetCursorScreenPos(); 
             ImGui::Image(IMID(gs.checker.Get_GPU_ID()), ImVec2(gs.checker.Get_Width(), gs.checker.Get_Height()));
 
             GUI_SEPERATION;
@@ -1283,7 +1269,7 @@ Main_Win::~Main_Win()
 }
 void Main_Win::OnWindowAwake()
 {
-#if defined Release
+#if defined NDEBUG
     ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 #endif
     App_Window::OnWindowAwake();
@@ -1371,7 +1357,6 @@ void Main_Win::OnUpdate()
                 
                 ImGui::End();
             }
-            //! keyboard shortcut impl here VV---------OpenKSCWindow
         }
 
         {

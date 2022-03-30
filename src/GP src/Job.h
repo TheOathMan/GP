@@ -47,7 +47,7 @@ struct Job :  type_methods< typename std::remove_cv<T>::type ,void> {
 	// provide a method and provide it's parameters if available for a job
 	template <typename ... Args >
 	void give(Args&& ... a);
-
+	
 	// number of timess this thread used
 	int used();
 

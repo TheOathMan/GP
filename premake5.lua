@@ -79,6 +79,7 @@ project "Glyph_Printer"
    -- use static runtime library on visual studio builds
    filter { "action:vs*", "configurations:Debug" }
       buildoptions "/MTd"
+      
    filter { "action:vs*", "configurations:Release" }
       buildoptions "/MT"
 
