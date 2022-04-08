@@ -45,7 +45,6 @@ void App_Window::OnWindowAwake()
     glfwSetWindowIcon(window, 1, icons);
 }
 
-
 void App_Window::OnUpdate()
 {
     glfwMakeContextCurrent(window);
@@ -56,7 +55,6 @@ void App_Window::OnUpdate()
 
 void App_Window::OnInput()
 {
-
 }
 
 void App_Window::SetBackgroundColor(uint8_t red, uint8_t green ,uint8_t blue)

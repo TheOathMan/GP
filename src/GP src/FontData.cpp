@@ -176,7 +176,7 @@ void FontData::init()
                         stbtt_vertex& vc1 = glyph_list.at(i).verts[glyph_setting];
                         stbtt_vertex& vc2 = gv.verts[glyph_setting];
 
-                        if (vc1.x != vc2.x && vc1.y != vc2.y && vc1.cx != vc2.cx && vc1.cy != vc2.cy) //|| vc1.cx != vc2.cx || vc1.cy != vc2.cy) 
+                        if (vc1.x != vc2.x || vc1.y != vc2.y || vc1.cx != vc2.cx || vc1.cy != vc2.cy || vc1.cx1 != vc2.cx1 || vc1.cy1 != vc2.cy1 ) 
                         {
                             isNew = true;
                             break;
