@@ -24,6 +24,7 @@
 #include "../ReadDir.h"
 #include "../FileHandle.h"
 #include "../Input.h"
+#include "../SafeVector.h"
 #include "../../NMC/imgui/imgui.h"
 #include "../../NMC/GLFW/glfw3.h"
 #include "../../NMC/tinydialog/tinyfiledialogs.h"
@@ -36,8 +37,7 @@ std::string LogInfo(int line, const char* fileName);
 
 #define GUI_SEPERATION ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing()
 // current selected font
-# define Current_Font         LoadList.loaded_fonts.at(fs.SelectedFont)
-# define Current_Glyph_Vertix Current_Font->get_glyph_listCC().at(fs.SelectedGlyph)
+# define Current_Font         FontLoading::loaded_fonts.at(fs.SelectedFont)
 
 void SetGUIWinToCenter(ImVec2 size);
 
@@ -60,30 +60,13 @@ struct Win_spec {
 } GPWins;
 
 // font/glyph loading functions and listing
-struct font_loading {
-    int Successful_laods = 0;
-    int Failed_Loads = 0;
-    int Previous_loads_size = 0;
-    std::vector<std::string> TargetFontsNames; // last font file names that was attmpted to load
-    void NewLoad(){TargetFontsNames.clear(); Successful_laods=0; Failed_Loads=0;   }
 
-    std::vector<std::shared_ptr<FontData>> loaded_fonts; //! might need a mutex
-    std::vector<std::shared_ptr<Image>> loaded_bitmaps; //list of glyphs bitmaps for preview 
-#if defined ASYNC_METHOD_THREADING || defined LOCALTHREAD_METHOD_THREADING
-    Job<void> loading_job;
-#else
-struct { bool is_working(){return false;}} loading_job ;
-#endif    
-    int Total_Font_Load=0;
-    bool open_log =false;
-    int SubWinsflags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings ;
-} LoadList;
 
 static bool OpenUsagewindow = false; 
 static bool OpenKSCWindow = false; 
 
 // font/glyph selections properities --------------
-struct font_selections {
+struct FontSelections {
     Image *SelectedImage=nullptr;
     int SelectedFont = 0;
     int SelectedGlyph = 0;
@@ -94,7 +77,7 @@ struct font_selections {
     bool active_Scroll_Update=false;
 }fs;
 
-struct glypg_shape_edit {
+struct GlypgShapeEdit {
     const float glyphs_tex_Scla = 150.0f;
     float gl_color[3]{};
     float BG_color[3]={ 1,1,1 };
@@ -104,30 +87,58 @@ struct glypg_shape_edit {
     Image checker;
 } gs;
 
-// mouse in controller in 2d space and grid
-struct glyph_edit_mouse_control {
+namespace FontLoading {
+    int Successful_laods = 0;
+    int Failed_Loads = 0;
+    int Previous_loads_size = 0;
+    std::vector<std::string> TargetFontsNames; // last font file names that was attmpted to load
+    void NewLoad(){TargetFontsNames.clear(); Successful_laods=0; Failed_Loads=0;   }
+
+    SafeVector<std::shared_ptr<FontData>> loaded_fonts; //! might need a mutex
+    SafeVector<std::shared_ptr<Image>> loaded_bitmaps; //list of glyphs bitmaps for preview 
+#if defined ASYNC_METHOD_THREADING || defined LOCALTHREAD_METHOD_THREADING
+    Job<void> loading_job;
+#else
+struct { bool is_working(){return false;}} loading_job ;
+#endif    
+    int Total_Font_Load=0;
+    bool open_log =false;
+    int SubWinsflags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings ;
+};
+
+// mouse controller in a 2d space for glyph vertex
+namespace MouseConEdit {
     bool in_boarder=false;
      float scroll_v = 1.f; // scrolling value
      Vec2 Start_pos, updated_pos;
      Vec2 mouse_drag, acom_vec;
      Vec2 ZoomPos = Vec2(0.5f,0.5f);
+     void reset() { 
+         ZoomPos = Vec2(0.5f, 0.5f); 
+         scroll_v = 1.f; 
+         in_boarder = false; 
+         Start_pos = Vec2();
+         updated_pos = Vec2();
+         mouse_drag = Vec2();
+         acom_vec = Vec2();
+     }
     // bool vertex_move = false;
-}sc;
+};
 
-struct glyph_vertex_edit {
+namespace VertexEdit {
     bool gui_xy=true, gui_cxy=true, gui_cxy1=true;
     bool vertex_move = false;
     int edit_index = -1;
     char type = {};
-}ve;
+};
 
-struct Enterted {
+namespace Enterted {
     bool EditPage;
     bool GlyphPage;
     bool SavePage;
-}entred;
+};
 
-struct LoadBarProg{
+namespace LoadBarProg{
     float Sum =0;
     float process_speed =0;
     // get a rough estimation of this thread processing power.
@@ -147,20 +158,17 @@ struct LoadBarProg{
         float res = Lerp(from,to,Sum);
         return ImMin(res,to);
     }
-}LoadProg;
+};
 
-struct Loading_GUI {
-    float waitAbit = 0.0f;                       // for not closing the bar immediately..
-    int Current_Font_Load = 0;
-
+namespace Loading_GUI {                      
     void Log( const char* log_name, bool* open, const char* msg, const std::vector<std::string>& log_lists) {
   
         if (*open) {
             SetGUIWinToCenter(ImVec2(500,300));
-            ImGui::Begin(log_name, open, LoadList.SubWinsflags, (int)Window_Resize_Dir::WRD_NONE);
+            ImGui::Begin(log_name, open, FontLoading::SubWinsflags, (int)Window_Resize_Dir::WRD_NONE);
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
             ImVec2 this_GwinSize = ImGui::GetWindowSize();
-            ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,LoadList.SubWinsflags);
+            ImGui::BeginChild("childnames",ImVec2(this_GwinSize.x - ImGui::GetStyle().WindowPadding.x*2.0 ,this_GwinSize.y-105),true,FontLoading::SubWinsflags);
             {
                 for (size_t i = 0; i < log_lists.size(); i++)
                 {
@@ -175,13 +183,14 @@ struct Loading_GUI {
             ImGui::TextUnformatted(msg);
 
             ImGui::PopStyleVar();
-            if(LoadList.Total_Font_Load) 
+            if(FontLoading::Total_Font_Load) 
                 ImGui::SetScrollY(ImGui::GetScrollMaxY());
             ImGui::End();
         }
     }
     bool ProcessLoadingLists(const char* loading_text,int& total_load_count, bool load_is_processing,int Current_load_count) 
     {
+        static float waitAbit = 0.0f;
         bool result = false;
         if (total_load_count>0) {
             ImGui::OpenPopup("Loading Fonts");
@@ -190,7 +199,7 @@ struct Loading_GUI {
         }
         
         // open loading window once the loading thread has started 
-        if (ImGui::BeginPopupModal("Loading Fonts", NULL, LoadList.SubWinsflags)) 
+        if (ImGui::BeginPopupModal("Loading Fonts", NULL, FontLoading::SubWinsflags)) 
         {
             ImGui::TextUnformatted(loading_text);
             ImGui::Separator();
@@ -200,7 +209,7 @@ struct Loading_GUI {
             float next_load = dfac * (Current_load_count + 1.0f);
 
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-            GpGUI::BufferingBar("##buffer_bar", load_is_processing ? LoadProg.calc(this_load,next_load, total_load_count,FontData::LastSizePushed/ 1e+6, 4.8f): 1, ImVec2(300, 6));
+            GpGUI::BufferingBar("##buffer_bar", load_is_processing ? LoadBarProg::calc(this_load,next_load, total_load_count,FontData::LastSizePushed/ 1e+6, 4.8f): 1, ImVec2(300, 6));
             ImGui::PopStyleVar();
 
             // thread ended its loading job, bar is full and we're waiting for a bit..
@@ -221,7 +230,7 @@ struct Loading_GUI {
         return result;
     }
 
-} LoadingGUI;
+};
 
 // GUI WRAPPER
 struct GUI_WINDOW {
@@ -276,8 +285,8 @@ void SetGUIWinToCenter(ImVec2 size){
 }
 
 bool Selection_Gaurd() {
-    if (!LoadList.loaded_fonts.empty()) {
-        fs.SelectedFont = fs.SelectedFont < 0 ? LoadList.loaded_fonts.size()-1 : fs.SelectedFont >= LoadList.loaded_fonts.size() ? 0 : fs.SelectedFont;
+    if (!FontLoading::loaded_fonts.empty()) {
+        fs.SelectedFont = fs.SelectedFont < 0 ? FontLoading::loaded_fonts.size()-1 : fs.SelectedFont >= FontLoading::loaded_fonts.size() ? 0 : fs.SelectedFont;
         fs.SelectedGlyph = fs.SelectedGlyph < 0 ? Current_Font->get_glyph_listCC().size()-1 : fs.SelectedGlyph >= Current_Font->get_glyph_listCC().size() ? 0 : fs.SelectedGlyph;      
         return true; 
     }
@@ -303,21 +312,21 @@ int LoadFont_Path(const char* path) {
         if (!strcmp(ptr,formats[i])) { 
             auto fd = std::make_shared<FontData>(path, file_name);
             if (fd->gui_handle != Gui_Handle::Delete) { // meaning loading the font was successful
-                LoadList.loaded_fonts.push_back(fd);
-                LoadList.Successful_laods++;
-                LoadList.TargetFontsNames.push_back(fd->get_font_name());
-                auto& b = LoadList.TargetFontsNames.back();
+                FontLoading::loaded_fonts.push_back(fd);
+                FontLoading::Successful_laods++;
+                FontLoading::TargetFontsNames.push_back(fd->get_font_name());
+                auto& b = FontLoading::TargetFontsNames.back();
                 b = '1' + b;
                 return 1;
             }
             else
             {
-                LoadList.Failed_Loads++;
-                LoadList.TargetFontsNames.push_back(fd->get_font_name());
-                auto& b = LoadList.TargetFontsNames.back();
+                FontLoading::Failed_Loads++;
+                FontLoading::TargetFontsNames.push_back(fd->get_font_name());
+                auto& b = FontLoading::TargetFontsNames.back();
                 b = '0' + b;
 
-                LoadList.Total_Font_Load--;
+                FontLoading::Total_Font_Load--;
             }
             break;
         }
@@ -326,15 +335,15 @@ int LoadFont_Path(const char* path) {
 }
 
 void FontLoadingJob(std::vector<std::string>&& fonst_paths, const int count) {
-    LoadProg.Sample();
+    LoadBarProg::Sample();
     if (fonst_paths.size() && count) {
-        LoadList.NewLoad();
-        LoadList.Total_Font_Load = count;
+        FontLoading::NewLoad();
+        FontLoading::Total_Font_Load = count;
         for (int i = 0; i < count; i++) {
             LoadFont_Path(fonst_paths[i].c_str());
-            LoadProg.Sum = 0;
+            LoadBarProg::Sum = 0;
         }
-        LoadList.Previous_loads_size = LoadList.loaded_fonts.size();
+        FontLoading::Previous_loads_size = FontLoading::loaded_fonts.size();
     }
 }
 
@@ -390,7 +399,7 @@ void Process_Glyph_Textures(bool trigger = false) {
 
     if ( FontSelectionCheck || PageSelectionCheck || trigger)
     {
-        LoadList.loaded_bitmaps.clear();
+        FontLoading::loaded_bitmaps.clear();
         Prev_CurrentPage = fs.CurrentPage;
         Prev_SelectedFont = fs.SelectedFont;
         Event::Notify(OnRenderingPageGlyphs());
@@ -412,19 +421,19 @@ void Process_Glyph_Textures(bool trigger = false) {
 //-------------------------------------[SECTION]:EVENTS IMPL-------------------------------------
 
 void DeletFontDataCallback(const EventType& ev) {
-    auto b = LoadList.loaded_fonts.begin();
-    auto e = LoadList.loaded_fonts.end();
+    auto b = FontLoading::loaded_fonts.toVector().begin();
+    auto e = FontLoading::loaded_fonts.toVector().end();
     auto d = std::remove_if(b, e, [](std::shared_ptr<FontData> a) { return a->gui_handle == Gui_Handle::Delete; });
-    LoadList.loaded_fonts.erase(d, e);   
-    LoadList.Previous_loads_size = LoadList.loaded_fonts.size();
+    FontLoading::loaded_fonts.toVector().erase(d, e);   
+    FontLoading::Previous_loads_size = FontLoading::loaded_fonts.size();
     Process_Glyph_Textures(true);
 }
 
 void FontsLoadingCallback(const EventType& e) {
     //fs.SelectedFont = 0;
-    //LoadList.loaded_bitmaps.clear();
+    //FontLoading::loaded_bitmaps.clear();
     //gs.glyph_edit = false;
-    LoadingGUI = Loading_GUI();
+    //LoadingGUI = Loading_GUI();
     auto db_e = static_cast<const OnFontsLoading&>(e);
     int count = db_e.count;
     FontLoadSource dc = db_e.fsource;
@@ -432,7 +441,7 @@ void FontsLoadingCallback(const EventType& e) {
     if (!count)return;
     const char** paths = db_e.paths;
     
-    if (LoadList.loading_job.is_working()) return;
+    if (FontLoading::loading_job.is_working()) return;
     std::vector<std::string> g_spath; // hard copy needed for laoding thread
     for (size_t i = 0; i < count; i++) { 
         g_spath.push_back(paths[i]);
@@ -446,9 +455,9 @@ void FontsLoadingCallback(const EventType& e) {
         } 
      }
 #if defined ASYNC_METHOD_THREADING
-    LoadList.loading_job.give(FontLoadingJob, move(g_spath), count);
+    FontLoading::loading_job.give(FontLoadingJob, move(g_spath), count);
 #elif defined LOCALTHREAD_METHOD_THREADING
-    LoadList.loading_job.Start([=]() 
+    FontLoading::loading_job.Start([=]() 
         mutable {FontLoadingJob(std::move(g_spath), count); });
 
 #else
@@ -472,7 +481,7 @@ void WindowFocusCallback(const EventType& e) {
 
 void GlyphPreviewRenderCallback(const EventType& e) {
     gs.final_scale=200;
-    sc = glyph_edit_mouse_control(); // reset
+    MouseConEdit::reset(); // reset
     ImageProcess(fs.SelectedImage, gs.glyphs_tex_Scla, (Image_Type)fs.glyph_setting, true, gs.gl_color, gs.BG_color); // default setting
 
     //New checkerboard image backgrownd on demand
@@ -492,8 +501,8 @@ void RenderingPageGlyphsCallback(const EventType& e) {
             //GP_Print("%i", i);
             if (i - CurGlyphPos > CELLS_NUMBER) break;
             Glyph_data ft = Current_Font->GetGlyphBitmap_V(i, 150.0f);
-            LoadList.loaded_bitmaps.push_back(std::make_shared<Image>( std::move(ft.pixels), ft.width, ft.height, 1));
-            Image& im = *LoadList.loaded_bitmaps.back();
+            FontLoading::loaded_bitmaps.push_back(std::make_shared<Image>( std::move(ft.pixels), ft.width, ft.height, 1));
+            Image& im = *FontLoading::loaded_bitmaps.back();
             im.BlackToAlpha(); LoadImageToGPU(im);
         }
         Event::Notify(OnGlyphPreviewRender());
@@ -530,10 +539,9 @@ void PreviewWinInitilizedCallback(const EventType& e) {
 }
 
 void ClearFontsCallback(const EventType& e) {
-    for (auto& glyph_setting : LoadList.loaded_fonts)
-        glyph_setting->gui_handle = Gui_Handle::Delete; 
+    FontLoading::loaded_fonts.for_each([](int i, std::shared_ptr<FontData>& sfd) {sfd->gui_handle = Gui_Handle::Delete; });
     fs.SelectedFont = 0;
-    LoadList.loaded_bitmaps.clear();
+    FontLoading::loaded_bitmaps.clear();
     gs.glyph_edit = false;
     Event::Connect<OnDeleteFontData>(DeletFontDataCallback); // remove any font tagged as Delete
 }
@@ -541,10 +549,10 @@ void ClearFontsCallback(const EventType& e) {
 void ScrollingCallback(const EventType& e) {
     auto wr_e = static_cast<const OnScrolling&>(e);
 
-    if (gs.glyph_edit && sc.in_boarder) {
-        sc.ZoomPos = ImGui::GetMousePos();
-        sc.scroll_v += 0.05f * wr_e.vertical;
-        sc.scroll_v = Clamp(sc.scroll_v, 0.3f, 3.0f);
+    if (gs.glyph_edit && MouseConEdit::in_boarder) {
+        MouseConEdit::ZoomPos = ImGui::GetMousePos();
+        MouseConEdit::scroll_v += 0.05f * wr_e.vertical;
+        MouseConEdit::scroll_v = Clamp(MouseConEdit::scroll_v, 0.3f, 3.0f);
     }
 }
 
@@ -610,7 +618,7 @@ void Main_Win::MainCanvesGUIWin() {
                 ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
                 draw_list->AddRect(cell_p1, cell_p2, cel_col);
                 // when we have a glyph texture presented, we fit it to each cell accordingly, taking it's width and hight 
-                Image* thisImage = LoadList.loaded_bitmaps.empty() || id >= LoadList.loaded_bitmaps.size() ? nullptr : LoadList.loaded_bitmaps.at(id).get();
+                Image* thisImage = FontLoading::loaded_bitmaps.empty() || id >= FontLoading::loaded_bitmaps.size() ? nullptr : FontLoading::loaded_bitmaps.at(id).get();
 
                 if (thisImage) {
                     last_hight = thisImage->Get_Height();
@@ -635,12 +643,12 @@ void Main_Win::MainCanvesGUIWin() {
 
                     ImGui::PopClipRect();
                     // are we hovering over this cell ?
-                    if (ImGui::IsMouseHoveringRect(cell_p1, cell_p2) && !LoadList.loading_job.is_working())
+                    if (ImGui::IsMouseHoveringRect(cell_p1, cell_p2) && !FontLoading::loading_job.is_working())
                     {
                         // left mouse click on a glyph
                         if (ImGui::IsMouseClicked(0) && !fs.Disable_Glyph_Selection) {
                             fs.SelectedGlyph = CurGlyphPos;
-                            GP_Print(fs.SelectedGlyph << "/" << (LoadList.loaded_fonts.size() ? Current_Font->get_glyph_listCC().size() - 1 : 0));
+                            //GP_Print(fs.SelectedGlyph << "/" << (FontLoading::loaded_fonts.size() ? Current_Font->get_glyph_listCC().size() - 1 : 0));
                         }
                         // right mouse click on a glyph
                         if (ImGui::IsMouseDown(1) && !fs.Disable_Glyph_Selection) {
@@ -671,30 +679,30 @@ void Main_Win::MainCanvesGUIWin() {
             if (avi_size.y < 50.0f) avi_size.y = 50.0f;
             Vec2i canvas_p(cursor_p.x + avi_size.x, cursor_p.y + avi_size.y);
 
-            Glyph_Vertices& CurrentGlyphVert = Current_Glyph_Vertix;
+            Glyph_Vertices& CurrentGlyphVert = Current_Font->get_glyph_listCC().at(fs.SelectedGlyph);
             ImVec2 mous_pos = ImGui::GetMousePos();
-            sc.in_boarder = (mous_pos.x < canvas_p.x) && (mous_pos.x > cursor_p.x) && (mous_pos.y < canvas_p.y) && (mous_pos.y > cursor_p.y);
+            MouseConEdit::in_boarder = (mous_pos.x < canvas_p.x) && (mous_pos.x > cursor_p.x) && (mous_pos.y < canvas_p.y) && (mous_pos.y > cursor_p.y);
 
 
             static bool in = false;
-            if (ImGui::IsMouseClicked(0) && sc.in_boarder) {
+            if (ImGui::IsMouseClicked(0) && MouseConEdit::in_boarder) {
                 in = true;
-                sc.Start_pos = Vec2(mous_pos);
+                MouseConEdit::Start_pos = Vec2(mous_pos);
             }
-            if (ImGui::IsMouseDown(0) && in && !ve.vertex_move) {
-                sc.updated_pos = Vec2(mous_pos);
-                sc.mouse_drag = (sc.updated_pos - sc.Start_pos) / sc.scroll_v + sc.acom_vec;
+            if (ImGui::IsMouseDown(0) && in && !VertexEdit::vertex_move) {
+                MouseConEdit::updated_pos = Vec2(mous_pos);
+                MouseConEdit::mouse_drag = (MouseConEdit::updated_pos - MouseConEdit::Start_pos) / MouseConEdit::scroll_v + MouseConEdit::acom_vec;
             }
             if (ImGui::IsMouseReleased(0) && in) {
-                ve.vertex_move = false;
-                sc.acom_vec = sc.mouse_drag;
+                VertexEdit::vertex_move = false;
+                MouseConEdit::acom_vec = MouseConEdit::mouse_drag;
                 in = false;
             }
 
 
             const auto Projuction = [&](float x, float y) {
-                float X = (x - CurrentGlyphVert.origin.x) * sc.scroll_v;
-                float Y = (-y + CurrentGlyphVert.origin.y) * sc.scroll_v;
+                float X = (x - CurrentGlyphVert.origin.x) * MouseConEdit::scroll_v;
+                float Y = (-y + CurrentGlyphVert.origin.y) * MouseConEdit::scroll_v;
                 return Vec2(X, Y);
             };
 
@@ -707,15 +715,15 @@ void Main_Win::MainCanvesGUIWin() {
             };
 
             const auto GlyphToScreen = [&](float x, float y) {
-                Vec2 r = view(x + sc.mouse_drag.x, y - sc.mouse_drag.y);
+                Vec2 r = view(x + MouseConEdit::mouse_drag.x, y - MouseConEdit::mouse_drag.y);
                 return ImVec2(r.x, r.y);
             };
 
             // Transfom vec2 from screen space to glyph space
             const auto ScreenToGlyph = [&](float x, float y) {
-                float descaler = (1.0f / sc.scroll_v);
-                float X = CurrentGlyphVert.origin.x - sc.mouse_drag.x + (x - to_op.x) * descaler;
-                float Y = CurrentGlyphVert.origin.y + sc.mouse_drag.y - (y - to_op.y) * descaler;
+                float descaler = (1.0f / MouseConEdit::scroll_v);
+                float X = CurrentGlyphVert.origin.x - MouseConEdit::mouse_drag.x + (x - to_op.x) * descaler;
+                float Y = CurrentGlyphVert.origin.y + MouseConEdit::mouse_drag.y - (y - to_op.y) * descaler;
                 return ImVec2(X, Y);
             };
 
@@ -725,9 +733,10 @@ void Main_Win::MainCanvesGUIWin() {
 
 
             // align scrolling value with centeric
-            ImVec2 scrolling(sc.mouse_drag.x * sc.scroll_v - (to_op.x * sc.scroll_v - to_op.x), sc.mouse_drag.y * sc.scroll_v - (to_op.y * sc.scroll_v - to_op.y));
+            ImVec2 scrolling(MouseConEdit::mouse_drag.x * MouseConEdit::scroll_v - (to_op.x * MouseConEdit::scroll_v - to_op.x), 
+                MouseConEdit::mouse_drag.y * MouseConEdit::scroll_v - (to_op.y * MouseConEdit::scroll_v - to_op.y));
 
-            const float GRID_STEP = 64.0f * sc.scroll_v;
+            const float GRID_STEP = 64.0f * MouseConEdit::scroll_v;
 
             for (float x = fmodf(scrolling.x, GRID_STEP); x < canvas_p.x; x += GRID_STEP)
             {
@@ -792,51 +801,51 @@ void Main_Win::MainCanvesGUIWin() {
                 segment_numL += static_cast<int> (Max(ceilf(ang2), 1.0f));
 
                 //show cords for verts/ connect control lines
-                if (distance(v_xy.x, v_xy.y, mous_pos.x, mous_pos.y) < 4.5f && !ve.vertex_move && ve.gui_xy) {
+                if (distance(v_xy.x, v_xy.y, mous_pos.x, mous_pos.y) < 4.5f && !VertexEdit::vertex_move && VertexEdit::gui_xy) {
                     DRAW_TEXT(draw_list, gui_spc->_main_font_Big, 0, v_Color, mous_pos.x - 30.0f, mous_pos.y - 30.0f, "V_XY: (%i, %i) this type = %i next type = %i", thisVert.x, thisVert.y, thisVert.type, nextVert.type);
                     LineColor = IM_COL32(238, 255, 0, 255);
                     line_thickness = 1.5f;
                     //grab a vert upon click
                     if (ImGui::IsMouseDown(0))
                     {
-                        ve.type = 1;
-                        ve.edit_index = i;
-                        ve.vertex_move = true;
+                        VertexEdit::type = 1;
+                        VertexEdit::edit_index = i;
+                        VertexEdit::vertex_move = true;
                     }
                 }
-                if (distance(v_cxy.x, v_cxy.y, mous_pos.x, mous_pos.y) < 4.5f && !ve.vertex_move && ve.gui_cxy) {
+                if (distance(v_cxy.x, v_cxy.y, mous_pos.x, mous_pos.y) < 4.5f && !VertexEdit::vertex_move && VertexEdit::gui_cxy) {
                     DRAW_TEXT(draw_list, gui_spc->_main_font_Big, 0, c_Color, mous_pos.x - 30.0f, mous_pos.y - 30.0f, "C_XY: (%i, %i)", thisVert.cx, thisVert.cy);
                     draw_list->AddLine(v_cxy, pv_xy, c_Color, line_thickness);
                     ///grab a vert upon click
                     if (ImGui::IsMouseDown(0)) {
-                        ve.type = 2;
-                        ve.edit_index = i;
-                        ve.vertex_move = true;
+                        VertexEdit::type = 2;
+                        VertexEdit::edit_index = i;
+                        VertexEdit::vertex_move = true;
                     }
                 }
-                if (distance(v_cxy1.x, v_cxy1.y, mous_pos.x, mous_pos.y) < 4.5f && !ve.vertex_move && ve.gui_cxy1) {
+                if (distance(v_cxy1.x, v_cxy1.y, mous_pos.x, mous_pos.y) < 4.5f && !VertexEdit::vertex_move && VertexEdit::gui_cxy1) {
                     DRAW_TEXT(draw_list, gui_spc->_main_font_Big, 0, c1_Color, mous_pos.x - 30.0f, mous_pos.y - 30.0f, "C1_XY: (%i, %i)", thisVert.cx1, thisVert.cy1);
                     draw_list->AddLine(v_cxy1, v_xy, c1_Color, line_thickness);
                     //grab a vert upon click
                     if (ImGui::IsMouseDown(0))
                     {
-                        ve.type = 3;
-                        ve.edit_index = i;
-                        ve.vertex_move = true;
+                        VertexEdit::type = 3;
+                        VertexEdit::edit_index = i;
+                        VertexEdit::vertex_move = true;
                     }
                 }
 
                 // vertex edit
-                if (ve.vertex_move && i == ve.edit_index) {
-                    if (ve.type == 1) {
+                if (VertexEdit::vertex_move && i == VertexEdit::edit_index) {
+                    if (VertexEdit::type == 1) {
                         thisVert.x = mousPonInGlyphPos.x;
                         thisVert.y = mousPonInGlyphPos.y;
                     }
-                    if (ve.type == 2) {
+                    if (VertexEdit::type == 2) {
                         thisVert.cx = mousPonInGlyphPos.x;
                         thisVert.cy = mousPonInGlyphPos.y;
                     }
-                    if (ve.type == 3) {
+                    if (VertexEdit::type == 3) {
                         thisVert.cx1 = mousPonInGlyphPos.x;
                         thisVert.cy1 = mousPonInGlyphPos.y;
                     }
@@ -879,11 +888,11 @@ void Main_Win::MainCanvesGUIWin() {
                 }
 
                 // draw verts circle positions
-                if (!is_empty(thisVert, xy) && ve.gui_xy)
+                if (!is_empty(thisVert, xy) && VertexEdit::gui_xy)
                     gui_spc->_main_font_Big->RenderChar(draw_list, 29, ImVec2(v_xy.x - 6, v_xy.y - 16), v_Color, 'o');
-                if (!is_empty(thisVert, cxy) && (thisVert.type == STBTT_vcurve || thisVert.type == STBTT_vcubic) && ve.gui_cxy)
+                if (!is_empty(thisVert, cxy) && (thisVert.type == STBTT_vcurve || thisVert.type == STBTT_vcubic) && VertexEdit::gui_cxy)
                     gui_spc->_main_font_Big->RenderChar(draw_list, 29, ImVec2(v_cxy.x - 6, v_cxy.y - 16), c_Color, 'o');
-                if (!is_empty(thisVert, cxy1) && (thisVert.type == STBTT_vcubic) && ve.gui_cxy1)
+                if (!is_empty(thisVert, cxy1) && (thisVert.type == STBTT_vcubic) && VertexEdit::gui_cxy1)
                     gui_spc->_main_font_Big->RenderChar(draw_list, 29, ImVec2(v_cxy1.x - 6, v_cxy1.y - 16), c1_Color, 'o');
             }
         }
@@ -900,7 +909,7 @@ void Main_Win::GlyphProcessPages() {
         // font info tap
         if (ImGui::BeginTabItem("      Edit      "))
         {
-            if (entred.EditPage) { entred.EditPage = false; Event::Notify(OnEditPageEntered());}
+            if (Enterted::EditPage) { Enterted::EditPage = false; Event::Notify(OnEditPageEntered());}
             BIG_TEXT("Edit Glyph Image: "); GpGUI::SPINE();
             ImVec2 ChickerBoardPos = ImGui::GetCursorScreenPos(); 
             ImGui::Image(IMID(gs.checker.Get_GPU_ID()), ImVec2(gs.checker.Get_Width(), gs.checker.Get_Height()));
@@ -940,11 +949,11 @@ void Main_Win::GlyphProcessPages() {
             ImGui::EndChild();
             
             ImGui::EndTabItem();
-        } else entred.EditPage = true;
+        } else Enterted::EditPage = true;
 
         if (ImGui::BeginTabItem("      Save      "))
         {
-            if (entred.SavePage) { entred.SavePage = false; Event::Notify(OnSavePageEntered()); }
+            if (Enterted::SavePage) { Enterted::SavePage = false; Event::Notify(OnSavePageEntered()); }
 
             // firs char used as an option. 1=bad log,  0=good log.
             static const char* LogResult = " ";
@@ -1073,31 +1082,31 @@ void Main_Win::GlyphProcessPages() {
             }
             ImGui::EndChild();
             ImGui::EndTabItem();
-        } else entred.SavePage = true;
+        } else Enterted::SavePage = true;
         // contain glyph shape info with the ability to copy data
         if (ImGui::BeginTabItem("      Glyph      "))
         {
             int debugin = 0;
-            if (entred.GlyphPage) { entred.GlyphPage = false; Event::Notify(OnGlyphPageEntered()); }
+            if (Enterted::GlyphPage) { Enterted::GlyphPage = false; Event::Notify(OnGlyphPageEntered()); }
 
             BIG_TEXT("Glyph Shape Data: "); GpGUI::SPINE();
 
             if (Selection_Gaurd()) {
 
-                const Glyph_Vertices& CurrentGlyphVert = Current_Glyph_Vertix;
+                const Glyph_Vertices& CurrentGlyphVert = Current_Font->get_glyph_listCC().at(fs.SelectedGlyph);
 
                 if (ImGui::Button(gs.glyph_edit ? "End Editing" : "Edit Vertices", ImVec2(ImGui::GetWindowSize().x - gui_spc->style->FramePadding.x, 35))) {
                     if (gs.glyph_edit) {
                         Event::Notify(OnRenderingPageGlyphs());
                     }
                     gs.glyph_edit = !gs.glyph_edit;
-                    sc = glyph_edit_mouse_control(); // reset TODO:
+                    MouseConEdit::reset(); // reset TODO:
                 }
 
                 if (gs.glyph_edit) {
-                    GpGUI::CheckBox("XY", &ve.gui_xy);
-                    GpGUI::CheckBox("CXY1", &ve.gui_cxy);
-                    if (CurrentGlyphVert.max_type == STBTT_vcubic) GpGUI::CheckBox("CXY2", &ve.gui_cxy1);        
+                    GpGUI::CheckBox("XY", &VertexEdit::gui_xy);
+                    GpGUI::CheckBox("CXY1", &VertexEdit::gui_cxy);
+                    if (CurrentGlyphVert.max_type == STBTT_vcubic) GpGUI::CheckBox("CXY2", &VertexEdit::gui_cxy1);
                 }
                 ImGuiStyle& style = ImGui::GetStyle();
                 int avi_types = CurrentGlyphVert.max_type - 1; // availiable control points
@@ -1155,7 +1164,7 @@ void Main_Win::GlyphProcessPages() {
                 }
             }
             ImGui::EndTabItem();
-        }else entred.GlyphPage = true;
+        }else Enterted::GlyphPage = true;
         ImGui::EndTabBar();
     }
 }
@@ -1166,38 +1175,33 @@ void Main_Win::FontSelections() {
     BIG_TEXT("Loaded Fonts: "); GpGUI::SPINE();
     ImGui::BeginChild("child window");
     
-        //static int selected = -1;
-        for (uint id = 0; id < LoadList.loaded_fonts.size(); id++)
-        {
-            if (Selection_Gaurd() && LoadList.loaded_fonts.at(id)->gui_handle == Gui_Handle::Visible) { // - erorr
-                ImGui::PushID(id);
-                // get selection value
-                if (ImGui::Selectable(LoadList.loaded_fonts.at(id)->get_font_name().c_str(), fs.SelectedFont == id)) 
-                    fs.SelectedFont = id;
-                
+    FontLoading::loaded_fonts.for_each([](int i, std::shared_ptr<FontData>& sfd) {
+        if (Selection_Gaurd() && sfd->gui_handle == Gui_Handle::Visible) { // - erorr
+            ImGui::PushID(i);
+            // get selection value
+            if (ImGui::Selectable(sfd->get_font_name().c_str(), fs.SelectedFont == i))
+                fs.SelectedFont = i;
 
-                if (ImGui::BeginPopupContextItem())
-                {
-                    if (ImGui::Button("Remove")) {
-                        auto TargetFont = LoadList.loaded_fonts.at(id);
-                        TargetFont->gui_handle = Gui_Handle::Delete;
-                        ImGui::CloseCurrentPopup();
-                        Event::Connect<OnDeleteFontData>(DeletFontDataCallback);
-                    }
-                    ImGui::EndPopup();
+
+            if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::Button("Remove")) {
+                    auto TargetFont = sfd;
+                    TargetFont->gui_handle = Gui_Handle::Delete;
+                    ImGui::CloseCurrentPopup();
+                    Event::Connect<OnDeleteFontData>(DeletFontDataCallback);
                 }
-                ImGui::PopID();
-                ImGui::SameLine(GPWins.cgws_RHS.x - 105.f);
-                // Add file size on the side
-                float fn = Selection_Gaurd() ? LoadList.loaded_fonts.at(id)->get_font_file_sizeN() / 1e+6 : 0;
-                ImGui::Text(fn > 99 ? "%0.1f MB" : fn > 10 ? "%0.2f MB" : "%0.3f MB", fn);
+                ImGui::EndPopup();
             }
-            //else
-            //    // handle deleted fonts and move them to the back
-            //    if (LoadList.loaded_fonts.at(id)->gui_handle == Gui_Handle::Delete)
-            //        moveItemToBack(LoadList.loaded_fonts, id);
-
+            ImGui::PopID();
+            ImGui::SameLine(GPWins.cgws_RHS.x - 105.f);
+            // Add file size on the side
+            float fn = Selection_Gaurd() ? sfd->get_font_file_sizeN() / 1e+6 : 0;
+            ImGui::Text(fn > 99 ? "%0.1f MB" : fn > 10 ? "%0.2f MB" : "%0.3f MB", fn);
         }
+
+        });
+
     ImGui::EndChild();
     
 
@@ -1267,8 +1271,11 @@ Main_Win::~Main_Win()
 {
     gui_spc->GUI_OnDestruction();
 }
+
 void Main_Win::OnWindowAwake()
 {
+
+
 #if defined NDEBUG
     ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 #endif
@@ -1319,14 +1326,14 @@ void Main_Win::OnUpdate()
             ImGui::SetNextItemWidth(70.0f);
             MainCanvesGUIWin();
             
-            const char* loading_str = LoadList.loaded_fonts.empty() ? "Loading Font..." : LoadList.loaded_fonts.back()->get_font_name().c_str();
-            if (LoadingGUI.ProcessLoadingLists(loading_str,LoadList.Total_Font_Load, LoadList.loading_job.is_working(), LoadList.loaded_fonts.size() - LoadList.Previous_loads_size)) {
+            const char* loading_str = FontLoading::loaded_fonts.empty() ? "Loading Font..." : FontLoading::loaded_fonts.back()->get_font_name().c_str();
+            if (Loading_GUI::ProcessLoadingLists(loading_str,FontLoading::Total_Font_Load, FontLoading::loading_job.is_working(), FontLoading::loaded_fonts.size() - FontLoading::Previous_loads_size)) {
                 Process_Glyph_Textures(true);
-                LoadList.open_log = true;
+                FontLoading::open_log = true;
             }
             char logmsg[254];
-            sprintf(logmsg,"%i font files was successfully loaded \n%i font files failed to load",LoadList.Successful_laods,LoadList.Failed_Loads);
-            LoadingGUI.Log("Log", &LoadList.open_log,logmsg, LoadList.TargetFontsNames);
+            sprintf(logmsg,"%i font files was successfully loaded \n%i font files failed to load",FontLoading::Successful_laods,FontLoading::Failed_Loads);
+            Loading_GUI::Log("Log", &FontLoading::open_log,logmsg, FontLoading::TargetFontsNames);
 
             if(OpenUsagewindow){ 
                 SetGUIWinToCenter(ImVec2(500,150));
@@ -1428,7 +1435,7 @@ void Main_Win::OnInput()
     if(Input::get_active_count() == 3){
         if(Input::is_pressing(InputKey::LEFT_CONTROL)){
             if(Input::is_pressing(InputKey::LEFT_ALT) && Input::is_released(InputKey::D)){
-                LoadList.loaded_fonts.at(fs.SelectedFont).get()->gui_handle = Gui_Handle::Delete;
+                Current_Font.get()->gui_handle = Gui_Handle::Delete;
                 Event::Connect<OnDeleteFontData>(DeletFontDataCallback);
             }
 

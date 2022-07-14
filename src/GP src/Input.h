@@ -23,8 +23,8 @@ struct Input{
     static bool is_pressing(InputKey key);         // if key was on hold, this will return true on every app frame.
     static bool is_hold(InputKey key);             // if key was on hold, this will return true only based on system Keyboard Repeat Rate And Repeat.
     static int  get_active_count(); 
-    private:
     static bool is_new_input(); // true if a new entry updated or added
+    private:
     static std::vector<InputData> input_pool; //recent input sorted on top
     friend void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods); //access to Input(InputData ip);
     friend int main(int, char**);                                                              //access to is_new_input();
